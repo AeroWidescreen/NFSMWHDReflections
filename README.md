@@ -8,5 +8,5 @@
 - GeometryFix : Restores missing geometry, such as frontend reflections and world detail.
 
 ## Credits
-[Aero_](https://github.com/AeroWidescreen) : Creator of NFSMW HD Reflections  
-[ExOpts Team](https://github.com/ExOptsTeam/) : The majority of the project is based on their work. This wouldn't exist without them.  
+[Aero_](https://github.com/AeroWidescreen) : Creator of NFSMW HD Reflections.  
+[ExOpts Team](https://github.com/ExOptsTeam/) : The project is based on Extra Options and it wouldn't exist without them.
