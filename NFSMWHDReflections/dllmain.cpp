@@ -64,8 +64,9 @@ void Init()
 		// Vehicle Reflection
 		injector::WriteMemory<uint32_t>(0x8F8FF4, ResolutionY, true);
 		// RVM Reflection
+		// Aspect ratio is based on NFSU2 because true aspect ratio is unknown
 		injector::WriteMemory<uint32_t>(0x8F9008, ResolutionY, true);
-		injector::WriteMemory<uint32_t>(0x8F900C, ResolutionY, true);
+		injector::WriteMemory<uint32_t>(0x8F900C, ResolutionY / 3, true);
 	}
 
 	if (ImproveReflectionLOD)
