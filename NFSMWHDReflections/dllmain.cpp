@@ -8,8 +8,8 @@
 
 DWORD WINAPI Thing(LPVOID);
 
-bool HDReflections, ImproveReflectionLOD, GeometryFix;
-static int ResolutionX, ResolutionY;
+bool HDReflections, GeometryFix;
+static int ResolutionX, ResolutionY, ImproveReflectionLOD;
 DWORD GameState;
 HWND windowHandle;
 
@@ -69,8 +69,15 @@ void Init()
 		injector::WriteMemory<uint32_t>(0x8F900C, ResolutionY / 3, true);
 	}
 
-	if (ImproveReflectionLOD)
+	if (ImproveReflectionLOD >= 1)
 	{
+		// Vehicle Reflection LOD
+		injector::WriteMemory<uint32_t>(0x6BFEBD, 0x00000000, true);
+		// RVM LOD
+		injector::WriteMemory<uint32_t>(0x6BFE58, 0x00000000, true);
+		
+		if (ImproveReflectionLOD >= 2)
+		// Full LOD Improvement
 		injector::WriteMemory<uint8_t>(0x4FAEB0, 0xEB, true);
 	}
 
