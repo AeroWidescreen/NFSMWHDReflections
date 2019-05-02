@@ -8,13 +8,17 @@
 
 DWORD WINAPI Thing(LPVOID);
 
-bool HDReflections, GeometryFix;
+bool HDReflections, GeometryFix, RestoreReflectionLights;
 static int ResolutionX, ResolutionY, ImproveReflectionLOD;
 DWORD GameState;
 HWND windowHandle;
 
 DWORD RestoreFEReflectionCodeCaveExit = 0x6BD502;
 DWORD VehicleReflectionCodeCaveExit = 0x6BD533;
+DWORD FlareAnimationRestorationCodeCaveExit = 0x6DE9F8;
+DWORD FlareAnimationRestorationCall = 0x505E80;
+DWORD FlareAnimationRestorationStackPointer = 0x00000000;
+DWORD FlareAnimationFunctionJump = 0x507781;
 
 void __declspec(naked) RestoreFEReflectionCodeCave()
 {
@@ -33,6 +37,30 @@ void __declspec(naked) VehicleReflectionCodeCave()
 	}
 }
 
+void __declspec(naked) FlareAnimationRestorationCodeCave()
+{
+	__asm {
+		call FlareAnimationRestorationCall
+		add esp, 0x08
+		mov eax, esp
+		mov dword ptr ds : [FlareAnimationRestorationStackPointer], eax // Saves stack pointer to address
+		push 0x00919730 // RVM eView
+		call FlareAnimationFunction // Flare Animation call
+		mov eax, dword ptr ds : [FlareAnimationRestorationStackPointer] // Moves stack pointer back to eax
+		mov esp, eax // Restores stack pointer
+		jmp FlareAnimationRestorationCodeCaveExit
+
+	FlareAnimationFunction:
+		sub esp, 0x08
+		push ebp
+		push edi
+		mov edi, dword ptr ds : [esp + 0x14]
+		mov ecx, dword ptr ds : [edi + 0x04]
+		mov eax, 0x02 // Prevents sun flare from appearing in RVM
+		jmp FlareAnimationFunctionJump
+	}
+}
+
 void Init()
 {
 	// Read values from .ini
@@ -46,6 +74,7 @@ void Init()
 	HDReflections = iniReader.ReadInteger("GENERAL", "HDReflections", 1);
 	ImproveReflectionLOD = iniReader.ReadInteger("GENERAL", "ImproveReflectionLOD", 1);
 	GeometryFix = iniReader.ReadInteger("GENERAL", "GeometryFix", 1);
+	RestoreReflectionLights = iniReader.ReadInteger("GENERAL", "RestoreReflectionLights", 1);
 
 
 	if (HDReflections)
@@ -84,6 +113,12 @@ void Init()
 	if (GeometryFix)
 	{
 		injector::WriteMemory<uint8_t>(0x6C69AE, 0xEB, true);
+	}
+
+	if (RestoreReflectionLights)
+	{
+		injector::MakeJMP(0x6DE9F0, FlareAnimationRestorationCodeCave, true);
+		injector::WriteMemory<uint8_t>(0x729479, 0xEB, true); // Fixes invisible lights in reflections
 	}
 }
 	
