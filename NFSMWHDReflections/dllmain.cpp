@@ -18,6 +18,10 @@ DWORD VehicleReflectionCodeCaveExit = 0x6BD533;
 DWORD FlareAnimationRestorationCodeCaveExit = 0x6DE9F8;
 DWORD FlareAnimationFunctionJump = 0x507781;
 DWORD sub_505E80 = 0x505E80;
+DWORD FlareLayeringCodeCaveExit = 0x6DE990;
+DWORD sub_723FA0 = 0x723FA0;
+DWORD sub_750B10 = 0x750B10;
+DWORD sub_6E2F50 = 0x6E2F50;
 
 void __declspec(naked) RestoreFEReflectionCodeCave()
 {
@@ -53,6 +57,22 @@ void __declspec(naked) FlareAnimationRestorationCodeCave()
 		mov ecx, dword ptr ds : [edi + 0x04]
 		mov eax, 0x02 // Removes buggy sun flare in RVM
 		jmp FlareAnimationFunctionJump
+	}
+}
+
+void __declspec(naked) FlareLayeringCodeCave()
+{
+	__asm {
+		push 01
+		push 0x00919730
+		lea ecx, dword ptr ds : [esp + 0xE8]
+		call sub_723FA0 // world
+		push ebx
+		push 0x00919730
+		call sub_750B10 // vehicle
+		call sub_6E2F50 // must be called after "world" and "vehicle" to fix layering issue
+		mov ebx, 0x00
+		jmp FlareLayeringCodeCaveExit
 	}
 }
 
@@ -112,8 +132,10 @@ void Init()
 
 	if (RestoreLights)
 	{
-		// Adds missing flare animation for the rearview mirror
+		// Adds missing traffic lights for the rearview mirror
 		injector::MakeJMP(0x6DE9F0, FlareAnimationRestorationCodeCave, true);
+		// Solves flare layering issue
+		injector::MakeJMP(0x6DE96D, FlareLayeringCodeCave, true);
 		// Solves flare culling issue 
 		injector::WriteMemory<uint8_t>(0x729479, 0xEB, true);
 	}
