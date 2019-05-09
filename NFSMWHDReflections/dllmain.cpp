@@ -8,7 +8,7 @@
 
 DWORD WINAPI Thing(LPVOID);
 
-bool HDReflections, GeometryFix, RestoreLights;
+bool HDReflections, GeometryFix, RestoreLights, RestoreShadows, ExpandSlotPool;
 static int ResolutionX, ResolutionY, ImproveReflectionLOD;
 DWORD GameState;
 HWND windowHandle;
@@ -18,10 +18,12 @@ DWORD VehicleReflectionCodeCaveExit = 0x6BD533;
 DWORD FlareAnimationRestorationCodeCaveExit = 0x6DE9F8;
 DWORD FlareAnimationFunctionJump = 0x507781;
 DWORD sub_505E80 = 0x505E80;
-DWORD FlareLayeringCodeCaveExit = 0x6DE990;
+DWORD FlareAndShadowLayeringCodeCaveExit = 0x6DE990;
 DWORD sub_723FA0 = 0x723FA0;
 DWORD sub_750B10 = 0x750B10;
 DWORD sub_6E2F50 = 0x6E2F50;
+DWORD EnableCarShadowCodeCaveExit = 0x74E843;
+DWORD EnableCarShadowCodeCaveJump = 0x74E818;
 
 void __declspec(naked) RestoreFEReflectionCodeCave()
 {
@@ -60,19 +62,33 @@ void __declspec(naked) FlareAnimationRestorationCodeCave()
 	}
 }
 
-void __declspec(naked) FlareLayeringCodeCave()
+void __declspec(naked) FlareAndShadowLayeringCodeCave()
 {
 	__asm {
 		push 01
 		push 0x00919730
 		lea ecx, dword ptr ds : [esp + 0xE8]
-		call sub_723FA0 // world
+		call sub_723FA0 // World
+		call sub_6E2F50 // For car shadow
 		push ebx
 		push 0x00919730
-		call sub_750B10 // vehicle
-		call sub_6E2F50 // must be called after "world" and "vehicle" to fix layering issue
-		mov ebx, 0x00
-		jmp FlareLayeringCodeCaveExit
+		call sub_750B10 // Vehicle
+		call sub_6E2F50 // For flares
+		jmp FlareAndShadowLayeringCodeCaveExit
+	}
+}
+
+void __declspec(naked) EnableCarShadowCodeCave()
+{
+	__asm {
+		cmp dword ptr ds : [edi + 0x04], 0x01
+		je EnableCarShadowCodeCaveConditional
+		cmp dword ptr ds : [edi + 0x04], 0x03
+		je EnableCarShadowCodeCaveConditional
+		jmp EnableCarShadowCodeCaveExit
+		
+	EnableCarShadowCodeCaveConditional:
+		jmp EnableCarShadowCodeCaveJump
 	}
 }
 
@@ -90,6 +106,10 @@ void Init()
 	ImproveReflectionLOD = iniReader.ReadInteger("GENERAL", "ImproveReflectionLOD", 1);
 	GeometryFix = iniReader.ReadInteger("GENERAL", "GeometryFix", 1);
 	RestoreLights = iniReader.ReadInteger("GENERAL", "RestoreLights", 1);
+	RestoreShadows = iniReader.ReadInteger("GENERAL", "RestoreShadows", 1);
+
+	// Extra
+	ExpandSlotPool = iniReader.ReadInteger("EXTRA", "ExpandSlotPool", 1);
 
 
 	if (HDReflections)
@@ -132,12 +152,35 @@ void Init()
 
 	if (RestoreLights)
 	{
-		// Adds missing traffic lights for the rearview mirror
+		// Adds missing traffic lights to the rearview mirror
 		injector::MakeJMP(0x6DE9F0, FlareAnimationRestorationCodeCave, true);
-		// Solves flare layering issue
-		injector::MakeJMP(0x6DE96D, FlareLayeringCodeCave, true);
+		// Solves flare and car shadow layering issue
+		injector::MakeJMP(0x6DE96D, FlareAndShadowLayeringCodeCave, true);
 		// Solves flare culling issue 
 		injector::WriteMemory<uint8_t>(0x729479, 0xEB, true);
+	}
+
+	if (RestoreShadows)
+	{
+		// Adds missing car shadow to the rearview mirror
+		injector::MakeJMP(0x74E812, EnableCarShadowCodeCave, true);
+		// Solves flare and car shadow layering issue
+		injector::MakeJMP(0x6DE96D, FlareAndShadowLayeringCodeCave, true);
+	}
+
+	if (ExpandSlotPool)
+	{
+		// Fixes disappearing objects
+		// Default value: 409600
+		// New value: 1024000
+		injector::WriteMemory<uint32_t>(0x4C4151, 0x000FA000, true);
+		injector::WriteMemory<uint32_t>(0x4C4164, 0x000FA000, true);
+		injector::WriteMemory<uint32_t>(0x4C4179, 0x000FA000, true);
+		injector::WriteMemory<uint32_t>(0x4C41A0, 0x000FA000, true);
+		injector::WriteMemory<uint32_t>(0x5009D2, 0x000FA000, true);
+		injector::WriteMemory<uint32_t>(0x5009DC, 0x000FA000, true);
+		injector::WriteMemory<uint32_t>(0x500A01, 0x000FA000, true);
+		injector::WriteMemory<uint32_t>(0x500A12, 0x000FA000, true);
 	}
 }
 	
