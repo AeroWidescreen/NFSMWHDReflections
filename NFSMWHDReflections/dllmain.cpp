@@ -8,8 +8,8 @@
 
 DWORD WINAPI Thing(LPVOID);
 
-bool HDReflections, GeometryFix, RestoreLights, RestoreShadows, ExpandSlotPool;
-static int ResolutionX, ResolutionY, ImproveReflectionLOD;
+bool HDReflections, GeometryFix, RestoreLights, RestoreShadows, RestoreShaders, MirrorTint, ExpandSlotPool;
+static int ResolutionX, ResolutionY, ImproveReflectionLOD, MirrorTintR, MirrorTintG, MirrorTintB;
 DWORD GameState;
 HWND windowHandle;
 
@@ -24,6 +24,11 @@ DWORD sub_750B10 = 0x750B10;
 DWORD sub_6E2F50 = 0x6E2F50;
 DWORD EnableCarShadowCodeCaveExit = 0x74E843;
 DWORD EnableCarShadowCodeCaveJump = 0x74E818;
+DWORD EnableShadersCodeCaveExit = 0x6DABDB;
+DWORD EnableShadersCodeCaveJump = 0x6DABFC;
+DWORD MirrorRGBCodeCaveExit = 0x6E7126;
+DWORD RemoveRoadReflectionCodeCaveExit = 0x6D71F6;
+DWORD RemoveRoadReflectionCodeCavePart2Exit = 0x6D7264;
 
 void __declspec(naked) RestoreFEReflectionCodeCave()
 {
@@ -92,6 +97,109 @@ void __declspec(naked) EnableCarShadowCodeCave()
 	}
 }
 
+void __declspec(naked) RemoveRoadReflectionCodeCave()
+{
+	__asm {
+		mov eax, dword ptr ds : [0x982A20]
+		cmp dword ptr ds : [eax + 0x04], 0x03
+		je RemoveRoadReflectionCodeCavePart2
+		push ebp
+		mov ebp, esp
+		and esp, 0xFFFFFFF0
+		jmp RemoveRoadReflectionCodeCaveExit
+
+	RemoveRoadReflectionCodeCavePart2:
+		push ebp
+		mov ebp, esp
+		and esp, 0xFFFFFFF0
+		sub esp, 0x58
+		mov eax, dword ptr ds : [0x982A20]
+		test eax, eax
+		push esi
+		push edi
+		mov esi, ecx
+		mov eax, dword ptr ds : [eax + 0x04]
+		fld dword ptr ds : [0x890968]
+		mov ecx, dword ptr ds : [0x9B392C]
+		imul eax, eax, 0x70
+		add eax, 0x9195E0
+		mov eax, dword ptr ds : [eax + 0x68]
+		test eax, eax
+		je RemoveRoadReflectionCodeCavePart2Jump1
+		fstp st(0)
+		fld dword ptr ds : [eax + 0x290]
+
+		RemoveRoadReflectionCodeCavePart2Jump1:
+		test eax, eax
+		fsubr dword ptr ds : [0x89096C]
+		fld st(0)
+		fmul dword ptr ds : [ecx + 0x40]
+		fstp dword ptr ds : [esp + 0x10]
+		fld st(0)
+		fmul dword ptr ds : [ecx + 0x44]
+		fstp dword ptr ds : [esp + 0x14]
+		fmul dword ptr ds : [ecx + 0x48]
+		fstp dword ptr ds : [esp + 0x18]
+		fld dword ptr ds : [0x890968]
+		je RemoveRoadReflectionCodeCavePart2Jump2
+		fstp st(0)
+		fld dword ptr ds : [eax + 0x36A0]
+
+		RemoveRoadReflectionCodeCavePart2Jump2:
+		mov eax, dword ptr ds : [esi + 0x44]
+		// fstp dword ptr [esp+1C] removing instruction removes road reflection
+		jmp RemoveRoadReflectionCodeCavePart2Exit
+	}
+}
+
+void __declspec(naked) EnableShadersCodeCave()
+{
+	__asm {
+		cmp eax,0x03
+		jle EnableShadersCodeCaveConditional
+		cmp dword ptr ds : [edi + 0x04], 0x00000000
+		je EnableShadersCodeCaveConditional
+		mov eax, dword ptr ds : [edi + 0x04]
+		jmp EnableShadersCodeCaveExit
+
+		EnableShadersCodeCaveConditional:
+		jmp EnableShadersCodeCaveJump
+	}
+}
+
+void __declspec(naked) MirrorRGBCodeCave()
+{
+	__asm {
+		mov byte ptr ds : [eax], 0xFF // Alpha
+		push ebx
+		mov ebx, dword ptr ds : [MirrorTintR]
+		call MirrorRGBValueCheckCodeCave
+		mov byte ptr ds : [eax - 0x03], bl // Red
+		mov ebx, dword ptr ds : [MirrorTintG]
+		call MirrorRGBValueCheckCodeCave
+		mov byte ptr ds : [eax - 0x02], bl // Green
+		mov ebx, dword ptr ds : [MirrorTintB]
+		call MirrorRGBValueCheckCodeCave
+		mov byte ptr ds : [eax - 0x01], bl // Blue
+		pop ebx
+		add eax, 0x04
+		jmp MirrorRGBCodeCaveExit
+
+	MirrorRGBValueCheckCodeCave:
+		cmp ebx, 0x000000FF
+		jg MirrorRGBValueCheckCodeCaveMax
+		cmp ebx, 0x00000000
+		jl MirrorRGBValueCheckCodeCaveMin
+		ret
+		MirrorRGBValueCheckCodeCaveMax:
+		mov ebx, 0x000000FF
+		ret
+		MirrorRGBValueCheckCodeCaveMin:
+		mov ebx, 0x00000000
+		ret
+	}
+}
+
 void Init()
 {
 	// Read values from .ini
@@ -107,9 +215,14 @@ void Init()
 	GeometryFix = iniReader.ReadInteger("GENERAL", "GeometryFix", 1);
 	RestoreLights = iniReader.ReadInteger("GENERAL", "RestoreLights", 1);
 	RestoreShadows = iniReader.ReadInteger("GENERAL", "RestoreShadows", 1);
+	RestoreShaders = iniReader.ReadInteger("GENERAL", "RestoreShaders", 1);
 
 	// Extra
 	ExpandSlotPool = iniReader.ReadInteger("EXTRA", "ExpandSlotPool", 1);
+	MirrorTint = iniReader.ReadInteger("EXTRA", "MirrorTint", 1);
+	MirrorTintR = iniReader.ReadInteger("EXTRA", "MirrorTintR", 255);
+	MirrorTintG = iniReader.ReadInteger("EXTRA", "MirrorTintG", 255);
+	MirrorTintB = iniReader.ReadInteger("EXTRA", "MirrorTintB", 255);
 
 
 	if (HDReflections)
@@ -168,19 +281,32 @@ void Init()
 		injector::MakeJMP(0x6DE96D, FlareAndShadowLayeringCodeCave, true);
 	}
 
+	if (RestoreShaders)
+	{
+		// Enables all shader effects for reflections
+		// Credit to osdever for discovery
+		injector::MakeJMP(0x6DABD4, EnableShadersCodeCave, true);
+		// Removes misaligned road reflections from rearview mirror
+		injector::MakeJMP(0x6D71F0, RemoveRoadReflectionCodeCave, true);
+	}
+
+	if (MirrorTint)
+	{
+		// Controls the RGB of the mirror
+		injector::MakeJMP(0x6E7120, MirrorRGBCodeCave, true);
+	}
+
 	if (ExpandSlotPool)
 	{
 		// Fixes disappearing objects
-		// Default value: 409600
-		// New value: 1024000
-		injector::WriteMemory<uint32_t>(0x4C4151, 0x000FA000, true);
-		injector::WriteMemory<uint32_t>(0x4C4164, 0x000FA000, true);
-		injector::WriteMemory<uint32_t>(0x4C4179, 0x000FA000, true);
-		injector::WriteMemory<uint32_t>(0x4C41A0, 0x000FA000, true);
-		injector::WriteMemory<uint32_t>(0x5009D2, 0x000FA000, true);
-		injector::WriteMemory<uint32_t>(0x5009DC, 0x000FA000, true);
-		injector::WriteMemory<uint32_t>(0x500A01, 0x000FA000, true);
-		injector::WriteMemory<uint32_t>(0x500A12, 0x000FA000, true);
+		injector::WriteMemory<uint32_t>(0x4C4151, 0xFA000, true);
+		injector::WriteMemory<uint32_t>(0x4C4164, 0xFA000, true);
+		injector::WriteMemory<uint32_t>(0x4C4179, 0xFA000, true);
+		injector::WriteMemory<uint32_t>(0x4C41A0, 0xFA000, true);
+		injector::WriteMemory<uint32_t>(0x5009D2, 0xFA000, true);
+		injector::WriteMemory<uint32_t>(0x5009DC, 0xFA000, true);
+		injector::WriteMemory<uint32_t>(0x500A01, 0xFA000, true);
+		injector::WriteMemory<uint32_t>(0x500A12, 0xFA000, true);
 	}
 }
 	
