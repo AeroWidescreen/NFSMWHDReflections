@@ -256,6 +256,8 @@ void Init()
 		if (ImproveReflectionLOD >= 2)
 		// Full LOD Improvement
 		injector::WriteMemory<uint8_t>(0x4FAEB0, 0xEB, true);
+		if (ImproveReflectionLOD >= 2)
+		injector::WriteMemory<uint8_t>(0x4FAE9A, 0xEB, true);
 	}
 
 	if (GeometryFix)
@@ -286,7 +288,7 @@ void Init()
 		// Enables all shader effects for reflections
 		// Credit to osdever for discovery
 		injector::MakeJMP(0x6DABD4, EnableShadersCodeCave, true);
-		// Removes misaligned road reflections from rearview mirror
+		// Removes road reflections from rearview mirror
 		injector::MakeJMP(0x6D71F0, RemoveRoadReflectionCodeCave, true);
 	}
 
@@ -299,10 +301,6 @@ void Init()
 	if (ExpandSlotPool)
 	{
 		// Fixes disappearing objects
-		injector::WriteMemory<uint32_t>(0x4C4151, 0xFA000, true);
-		injector::WriteMemory<uint32_t>(0x4C4164, 0xFA000, true);
-		injector::WriteMemory<uint32_t>(0x4C4179, 0xFA000, true);
-		injector::WriteMemory<uint32_t>(0x4C41A0, 0xFA000, true);
 		injector::WriteMemory<uint32_t>(0x5009D2, 0xFA000, true);
 		injector::WriteMemory<uint32_t>(0x5009DC, 0xFA000, true);
 		injector::WriteMemory<uint32_t>(0x500A01, 0xFA000, true);
