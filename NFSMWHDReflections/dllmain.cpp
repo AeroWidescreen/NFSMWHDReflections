@@ -8,24 +8,26 @@
 
 DWORD WINAPI Thing(LPVOID);
 
-bool HDReflections, GeometryFix, RestoreLights, RestoreShadows, RestoreShaders, MirrorTint, ExpandSlotPool;
-static int ResolutionX, ResolutionY, ImproveReflectionLOD, MirrorTintR, MirrorTintG, MirrorTintB;
+bool HDReflections, GeometryFix, RestoreShaders, MirrorTint, ExpandSlotPool;
+static int ResolutionX, ResolutionY, ImproveReflectionLOD, RestoreDetails, MirrorTintR, MirrorTintG, MirrorTintB;
 DWORD GameState;
 HWND windowHandle;
 
 DWORD RestoreFEReflectionCodeCaveExit = 0x6BD502;
 DWORD VehicleReflectionCodeCaveExit = 0x6BD533;
-DWORD FlareAnimationRestorationCodeCaveExit = 0x6DE9F8;
-DWORD FlareAnimationFunctionJump = 0x507781;
+DWORD TrafficLightRestorationCodeCaveExit = 0x6DE9F8;
+DWORD TrafficLightFunctionJump = 0x507781;
 DWORD sub_505E80 = 0x505E80;
 DWORD FlareAndShadowLayeringCodeCaveExit = 0x6DE990;
 DWORD sub_723FA0 = 0x723FA0;
 DWORD sub_750B10 = 0x750B10;
 DWORD sub_6E2F50 = 0x6E2F50;
+DWORD sub_503D00 = 0x503D00;
 DWORD EnableCarShadowCodeCaveExit = 0x74E843;
 DWORD EnableCarShadowCodeCaveJump = 0x74E818;
 DWORD EnableShadersCodeCaveExit = 0x6DABDB;
 DWORD EnableShadersCodeCaveJump = 0x6DABFC;
+DWORD EnableParticlesCodeCaveExit = 0x6DE9E8;
 DWORD MirrorRGBCodeCaveExit = 0x6E7126;
 DWORD RemoveRoadReflectionCodeCaveExit = 0x6D71F6;
 DWORD RemoveRoadReflectionCodeCavePart2Exit = 0x6D7264;
@@ -47,23 +49,23 @@ void __declspec(naked) VehicleReflectionCodeCave()
 	}
 }
 
-void __declspec(naked) FlareAnimationRestorationCodeCave()
+void __declspec(naked) TrafficLightRestorationCodeCave()
 {
 	__asm {
-		call FlareAnimationFunction // Flare Animation call
+		call TrafficLightFunction
 		push 0x00919730
 		call sub_505E80
 		add esp, 0x0C
-		jmp FlareAnimationRestorationCodeCaveExit
+		jmp TrafficLightRestorationCodeCaveExit
 
-	FlareAnimationFunction:
+	TrafficLightFunction:
 		sub esp, 0x08
 		push ebp
 		push edi
 		mov edi, dword ptr ds : [esp + 0x14]
 		mov ecx, dword ptr ds : [edi + 0x04]
 		mov eax, 0x02 // Removes buggy sun flare in RVM
-		jmp FlareAnimationFunctionJump
+		jmp TrafficLightFunctionJump
 	}
 }
 
@@ -73,12 +75,12 @@ void __declspec(naked) FlareAndShadowLayeringCodeCave()
 		push 01
 		push 0x00919730
 		lea ecx, dword ptr ds : [esp + 0xE8]
-		call sub_723FA0 // World
-		call sub_6E2F50 // For car shadow
+		call sub_723FA0
+		call sub_6E2F50
 		push ebx
 		push 0x00919730
-		call sub_750B10 // Vehicle
-		call sub_6E2F50 // For flares
+		call sub_750B10
+		call sub_6E2F50
 		jmp FlareAndShadowLayeringCodeCaveExit
 	}
 }
@@ -94,6 +96,33 @@ void __declspec(naked) EnableCarShadowCodeCave()
 		
 	EnableCarShadowCodeCaveConditional:
 		jmp EnableCarShadowCodeCaveJump
+	}
+}
+
+void __declspec(naked) EnableShadersCodeCave()
+{
+	__asm {
+		cmp eax, 0x03
+		jle EnableShadersCodeCaveConditional
+		cmp dword ptr ds : [edi + 0x04], 0x00000000
+		je EnableShadersCodeCaveConditional
+		mov eax, dword ptr ds : [edi + 0x04]
+		jmp EnableShadersCodeCaveExit
+
+		EnableShadersCodeCaveConditional :
+		jmp EnableShadersCodeCaveJump
+	}
+}
+
+void __declspec(naked) EnableParticlesCodeCave()
+{
+	__asm {
+		add esp, 0x0C
+		cmp eax, ebx
+		push 0x919730
+		mov ecx, 0x9166C0
+		call sub_503D00
+		jmp EnableParticlesCodeCaveExit
 	}
 }
 
@@ -152,21 +181,6 @@ void __declspec(naked) RemoveRoadReflectionCodeCave()
 	}
 }
 
-void __declspec(naked) EnableShadersCodeCave()
-{
-	__asm {
-		cmp eax,0x03
-		jle EnableShadersCodeCaveConditional
-		cmp dword ptr ds : [edi + 0x04], 0x00000000
-		je EnableShadersCodeCaveConditional
-		mov eax, dword ptr ds : [edi + 0x04]
-		jmp EnableShadersCodeCaveExit
-
-		EnableShadersCodeCaveConditional:
-		jmp EnableShadersCodeCaveJump
-	}
-}
-
 void __declspec(naked) MirrorRGBCodeCave()
 {
 	__asm {
@@ -213,8 +227,7 @@ void Init()
 	HDReflections = iniReader.ReadInteger("GENERAL", "HDReflections", 1);
 	ImproveReflectionLOD = iniReader.ReadInteger("GENERAL", "ImproveReflectionLOD", 1);
 	GeometryFix = iniReader.ReadInteger("GENERAL", "GeometryFix", 1);
-	RestoreLights = iniReader.ReadInteger("GENERAL", "RestoreLights", 1);
-	RestoreShadows = iniReader.ReadInteger("GENERAL", "RestoreShadows", 1);
+	RestoreDetails = iniReader.ReadInteger("GENERAL", "RestoreDetails", 1);
 	RestoreShaders = iniReader.ReadInteger("GENERAL", "RestoreShaders", 1);
 
 	// Extra
@@ -265,22 +278,20 @@ void Init()
 		injector::WriteMemory<uint8_t>(0x6C69AE, 0xEB, true);
 	}
 
-	if (RestoreLights)
+	if (RestoreDetails >= 1)
 	{
 		// Adds missing traffic lights to the rearview mirror
-		injector::MakeJMP(0x6DE9F0, FlareAnimationRestorationCodeCave, true);
+		injector::MakeJMP(0x6DE9F0, TrafficLightRestorationCodeCave, true);
 		// Solves flare and car shadow layering issue
 		injector::MakeJMP(0x6DE96D, FlareAndShadowLayeringCodeCave, true);
 		// Solves flare culling issue 
 		injector::WriteMemory<uint8_t>(0x729479, 0xEB, true);
-	}
-
-	if (RestoreShadows)
-	{
 		// Adds missing car shadow to the rearview mirror
 		injector::MakeJMP(0x74E812, EnableCarShadowCodeCave, true);
-		// Solves flare and car shadow layering issue
-		injector::MakeJMP(0x6DE96D, FlareAndShadowLayeringCodeCave, true);
+
+		if (RestoreDetails >= 2)
+		// Adds missing particle effects to the rearview mirror
+		injector::MakeJMP(0x6DE9E3, EnableParticlesCodeCave, true);
 	}
 
 	if (RestoreShaders)
