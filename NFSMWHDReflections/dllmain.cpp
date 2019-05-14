@@ -265,12 +265,17 @@ void Init()
 		injector::WriteMemory<uint32_t>(0x6BFEBD, 0x00000000, true);
 		// RVM LOD
 		injector::WriteMemory<uint32_t>(0x6BFE58, 0x00000000, true);
+		// Road Reflection LOD
+		injector::WriteMemory<uint8_t>(0x4FAE9A, 0xEB, true);
 		
 		if (ImproveReflectionLOD >= 2)
-		// Full LOD Improvement
+		// Full RVM LOD
 		injector::WriteMemory<uint8_t>(0x4FAEB0, 0xEB, true);
+		// Full Road Reflection LOD
 		if (ImproveReflectionLOD >= 2)
-		injector::WriteMemory<uint8_t>(0x4FAE9A, 0xEB, true);
+		injector::WriteMemory<uint8_t>(0x6BFF21, 0x06, true);
+		if (ImproveReflectionLOD >= 2)
+		injector::WriteMemory<uint8_t>(0x7293DB, 0x06, true);
 	}
 
 	if (GeometryFix)
