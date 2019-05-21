@@ -8,13 +8,15 @@
 
 DWORD WINAPI Thing(LPVOID);
 
-bool HDReflections, GeometryFix, RestoreShaders, MirrorTint, ExpandSlotPool;
+bool HDReflections, HDReflectionBlur, HDMirror, GeometryFix, RestoreShaders, MirrorTint, ExpandSlotPool;
 static int ResolutionX, ResolutionY, ImproveReflectionLOD, RestoreDetails, MirrorTintR, MirrorTintG, MirrorTintB;
+static float RoadScale, VehicleScale, MirrorScale;
 DWORD GameState;
 HWND windowHandle;
 
 DWORD RestoreFEReflectionCodeCaveExit = 0x6BD502;
 DWORD VehicleReflectionCodeCaveExit = 0x6BD533;
+DWORD HDReflectionBlurCodeCaveExit = 0x6BCE74;
 DWORD TrafficLightRestorationCodeCaveExit = 0x6DE9F8;
 DWORD TrafficLightFunctionJump = 0x507781;
 DWORD sub_505E80 = 0x505E80;
@@ -46,6 +48,28 @@ void __declspec(naked) VehicleReflectionCodeCave()
 		mov edi, dword ptr ds : [0x8F8FF4]
 		mov edx, dword ptr ds : [0x8F8FF8]
 		jmp VehicleReflectionCodeCaveExit
+	}
+}
+
+void __declspec(naked) HDReflectionBlurCodeCave()
+{
+	__asm {
+		cmp byte ptr ds : [HDReflectionBlur], 0x01
+		je HDReflectionBlurCodeCaveConditional
+		push 0x000000F0 // 240
+		push 0x00000140 // 320
+		push eax
+		jmp HDReflectionBlurCodeCavePart2
+
+	HDReflectionBlurCodeCaveConditional :
+		push ResolutionY
+		push ResolutionX
+		push eax
+		jmp HDReflectionBlurCodeCavePart2
+		
+	HDReflectionBlurCodeCavePart2 :
+		call dword ptr ds : [ecx + 0x5C]
+		jmp HDReflectionBlurCodeCaveExit
 	}
 }
 
@@ -222,10 +246,14 @@ void Init()
 	// Resolution
 	ResolutionX = iniReader.ReadInteger("RESOLUTION", "ResolutionX", 1920);
 	ResolutionY = iniReader.ReadInteger("RESOLUTION", "ResolutionY", 1080);
+	RoadScale = iniReader.ReadFloat("RESOLUTION", "RoadScale", 1.0);
+	VehicleScale = iniReader.ReadFloat("RESOLUTION", "VehicleScale", 1.0);
+	MirrorScale = iniReader.ReadFloat("RESOLUTION", "MirrorScale", 1.0);
 
 	// General
-	HDReflections = iniReader.ReadInteger("GENERAL", "HDReflections", 1);
-	ImproveReflectionLOD = iniReader.ReadInteger("GENERAL", "ImproveReflectionLOD", 1);
+	HDReflections = iniReader.ReadInteger("GENERAL", "HDRoadReflections", 1);
+	HDReflectionBlur = iniReader.ReadInteger("GENERAL", "HDReflectionBlur", 1);
+	ImproveReflectionLOD = iniReader.ReadInteger("GENERAL", "ImproveReflectionLOD", 2);
 	GeometryFix = iniReader.ReadInteger("GENERAL", "GeometryFix", 1);
 	RestoreDetails = iniReader.ReadInteger("GENERAL", "RestoreDetails", 1);
 	RestoreShaders = iniReader.ReadInteger("GENERAL", "RestoreShaders", 1);
@@ -244,19 +272,19 @@ void Init()
 		injector::MakeJMP(0x6BD4FC, RestoreFEReflectionCodeCave, true);
 		injector::MakeJMP(0x6BD52D, VehicleReflectionCodeCave, true);
 		// Road Reflection X
-		injector::WriteMemory<uint32_t>(0x6CFC26, ResolutionX, true);
-		injector::WriteMemory<uint32_t>(0x6BCDF5, ResolutionX, true);
-		injector::WriteMemory<uint32_t>(0x6BD17D, ResolutionX, true);
+		injector::WriteMemory<uint32_t>(0x6CFC26, ResolutionX * RoadScale, true);
+		injector::WriteMemory<uint32_t>(0x6BCDF5, ResolutionX * RoadScale, true);
+		injector::WriteMemory<uint32_t>(0x6BD17D, ResolutionX * RoadScale, true);
 		// Road Reflection Y
-		injector::WriteMemory<uint32_t>(0x6BD184, ResolutionY, true);
-		injector::WriteMemory<uint32_t>(0x6CFC2D, ResolutionY, true);
-		injector::WriteMemory<uint32_t>(0x6BCDEF, ResolutionY, true);
+		injector::WriteMemory<uint32_t>(0x6BD184, ResolutionY * RoadScale, true);
+		injector::WriteMemory<uint32_t>(0x6CFC2D, ResolutionY * RoadScale, true);
+		injector::WriteMemory<uint32_t>(0x6BCDEF, ResolutionY * RoadScale, true);
 		// Vehicle Reflection
-		injector::WriteMemory<uint32_t>(0x8F8FF4, ResolutionY, true);
+		injector::WriteMemory<uint32_t>(0x8F8FF4, ResolutionY * VehicleScale, true);
 		// RVM Reflection
 		// Aspect ratio is based on NFSU2 because true aspect ratio is unknown
-		injector::WriteMemory<uint32_t>(0x8F9008, ResolutionY, true);
-		injector::WriteMemory<uint32_t>(0x8F900C, ResolutionY / 3, true);
+		injector::WriteMemory<uint32_t>(0x8F9008, ResolutionY * MirrorScale, true);
+		injector::WriteMemory<uint32_t>(0x8F900C, (ResolutionY / 3) * MirrorScale, true);
 	}
 
 	if (ImproveReflectionLOD >= 1)
@@ -276,6 +304,11 @@ void Init()
 		injector::WriteMemory<uint8_t>(0x6BFF21, 0x06, true);
 		if (ImproveReflectionLOD >= 2)
 		injector::WriteMemory<uint8_t>(0x7293DB, 0x06, true);
+	}
+
+	// HDReflectionBlur
+	{
+		injector::MakeJMP(0x6BCE6E, HDReflectionBlurCodeCave, true);
 	}
 
 	if (GeometryFix)
