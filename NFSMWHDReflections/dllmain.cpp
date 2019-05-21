@@ -17,6 +17,8 @@ HWND windowHandle;
 DWORD RestoreFEReflectionCodeCaveExit = 0x6BD502;
 DWORD VehicleReflectionCodeCaveExit = 0x6BD533;
 DWORD HDReflectionBlurCodeCaveExit = 0x6BCE74;
+DWORD RoadReflectionResX = 0x0000000;
+DWORD RoadReflectionResY = 0x0000000;
 DWORD TrafficLightRestorationCodeCaveExit = 0x6DE9F8;
 DWORD TrafficLightFunctionJump = 0x507781;
 DWORD sub_505E80 = 0x505E80;
@@ -61,9 +63,15 @@ void __declspec(naked) HDReflectionBlurCodeCave()
 		push eax
 		jmp HDReflectionBlurCodeCavePart2
 
-	HDReflectionBlurCodeCaveConditional :
-		push ResolutionY
-		push ResolutionX
+		HDReflectionBlurCodeCaveConditional :
+		fild dword ptr ds : [ResolutionX]
+		fmul dword ptr ds : [RoadScale]
+		fistp dword ptr ds : [RoadReflectionResX]
+		push dword ptr ds : [RoadReflectionResX]
+		fild dword ptr ds : [ResolutionY]
+		fmul dword ptr ds : [RoadScale]
+		fistp dword ptr ds : [RoadReflectionResY]
+		push dword ptr ds : [RoadReflectionResY]
 		push eax
 		jmp HDReflectionBlurCodeCavePart2
 		
