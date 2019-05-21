@@ -18,4 +18,4 @@
 [ExOpts Team](https://github.com/ExOptsTeam/) : The project is based on Extra Options and it wouldn't exist without them.
 
 ## Thanks
-[osdever] (https://github.com/osdeverr) : Providing the information needed for RestoreShaders.
+[osdever](https://github.com/osdeverr) : Providing the information needed for RestoreShaders.
