@@ -3,7 +3,11 @@
 ## Features
 - ResolutionX : Controls the horizontal resolution of reflections.  
 - ResolutionY : Controls the vertical resolution of reflections. 
+- RoadScale : Scales the resolution of road reflections.  
+- VehicleScale : Scales the resolution of vehicle reflections.  
+- MirrorScale : Scales the resolution of the rearview mirror.  
 - HDReflections : Reflection resolution will be increased based on the values set.  
+- HDReflectionBlur : Blur resolution will be increased based on the values set.  
 - ImproveReflectionLOD : Increases the level of detail used in reflections.  
 - GeometryFix : Restores missing geometry, such as frontend reflections and world detail.  
 - RestoreDetails : Adds traffic lights, car shadows, and particle effects to the rearview mirror.  
