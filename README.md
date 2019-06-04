@@ -8,6 +8,7 @@
 - GeometryFix : Restores missing geometry, such as frontend reflections and world detail.  
 - RestoreDetails : Adds traffic lights, car shadows, and particle effects to the rearview mirror.  
 - RestoreShaders : Adds shader effects to the rearview mirror and enables barrier animations.  
+- OptimizeRenderDistance : Reduces excessive render distance of reflections to improve peformance.  
 
 ## Extra Features
 - ExpandSlotPool : Solves an issue that caused objects to disappear when too many polygons were present.  

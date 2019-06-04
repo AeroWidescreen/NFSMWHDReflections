@@ -8,9 +8,10 @@
 
 DWORD WINAPI Thing(LPVOID);
 
-bool HDReflections, HDReflectionBlur, HDMirror, GeometryFix, RestoreShaders, MirrorTint, ExpandSlotPool;
+bool HDReflections, HDReflectionBlur, HDMirror, GeometryFix, RestoreShaders, OptimizeRenderDistance, MirrorTint, ExpandSlotPool;
 static int ResolutionX, ResolutionY, ImproveReflectionLOD, RestoreDetails, MirrorTintR, MirrorTintG, MirrorTintB;
 static float RoadScale, VehicleScale, MirrorScale;
+static float SkyboxRenderDistace = 0.1f;
 DWORD GameState;
 HWND windowHandle;
 
@@ -35,6 +36,8 @@ DWORD EnableParticlesCodeCaveExit = 0x6DE9E8;
 DWORD MirrorRGBCodeCaveExit = 0x6E7126;
 DWORD RemoveRoadReflectionCodeCaveExit = 0x6D71F6;
 DWORD RemoveRoadReflectionCodeCavePart2Exit = 0x6D7264;
+DWORD RenderDistanceCodeCaveExit = 0x6E73A6;
+DWORD RenderDistanceCodeCaveExit2 = 0x6E73AB;
 
 void __declspec(naked) RestoreFEReflectionCodeCave()
 {
@@ -246,6 +249,29 @@ void __declspec(naked) MirrorRGBCodeCave()
 	}
 }
 
+void __declspec(naked) RenderDistanceCodeCave()
+{
+	__asm {
+		push ebx
+		push 0x00
+		mov ecx, edi
+		cmp dword ptr ds : [esi + 0x04], 0x12 // Vehicle Reflection
+		jnl RenderDistanceCodeCavePart2
+		cmp dword ptr ds : [esi + 0x04], 0x03 // RVM
+		je RenderDistanceCodeCavePart3
+		jmp RenderDistanceCodeCaveExit
+
+		RenderDistanceCodeCavePart2 :
+		cmp dword ptr ds : [esi + 0x04], 0x03
+		push 0x42C80000 // 100.0f
+		jmp RenderDistanceCodeCaveExit2
+
+		RenderDistanceCodeCavePart3 :
+		push 0x43400000 // 192.0f
+		jmp RenderDistanceCodeCaveExit2
+	}
+}
+
 void Init()
 {
 	// Read values from .ini
@@ -265,6 +291,7 @@ void Init()
 	GeometryFix = iniReader.ReadInteger("GENERAL", "GeometryFix", 1);
 	RestoreDetails = iniReader.ReadInteger("GENERAL", "RestoreDetails", 1);
 	RestoreShaders = iniReader.ReadInteger("GENERAL", "RestoreShaders", 1);
+	OptimizeRenderDistance = iniReader.ReadInteger("GENERAL", "OptimizeRenderDistance", 1);
 
 	// Extra
 	ExpandSlotPool = iniReader.ReadInteger("EXTRA", "ExpandSlotPool", 1);
@@ -321,7 +348,7 @@ void Init()
 
 	if (GeometryFix)
 	{
-		injector::WriteMemory<uint8_t>(0x6C69AE, 0xEB, true);
+		injector::WriteMemory<uint8_t>(0x8FAE44, 0x00, true);
 	}
 
 	if (RestoreDetails >= 1)
@@ -347,6 +374,12 @@ void Init()
 		injector::MakeJMP(0x6DABD4, EnableShadersCodeCave, true);
 		// Removes road reflections from rearview mirror
 		injector::MakeJMP(0x6D71F0, RemoveRoadReflectionCodeCave, true);
+	}
+
+	if (OptimizeRenderDistance)
+	{
+		injector::MakeJMP(0x6E73A1, RenderDistanceCodeCave, true);
+		injector::WriteMemory(0x6DB5C0, &SkyboxRenderDistace, true);
 	}
 
 	if (MirrorTint)
