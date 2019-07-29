@@ -6,20 +6,17 @@
 #include "..\includes\IniReader.h"
 #include <d3d9.h>
 
-DWORD WINAPI Thing(LPVOID);
-
 bool HDReflections, HDReflectionBlur, HDMirror, GeometryFix, RestoreShaders, OptimizeRenderDistance, MirrorTint, ExpandSlotPool;
 static int ResolutionX, ResolutionY, ImproveReflectionLOD, RestoreDetails, MirrorTintR, MirrorTintG, MirrorTintB;
+int ResX, ResY;
 static float RoadScale, VehicleScale, MirrorScale;
-static float SkyboxRenderDistace = 0.1f;
-DWORD GameState;
-HWND windowHandle;
+static float SkyboxRenderDistace = 0.1;
 
 DWORD RestoreFEReflectionCodeCaveExit = 0x6BD502;
 DWORD VehicleReflectionCodeCaveExit = 0x6BD533;
 DWORD HDReflectionBlurCodeCaveExit = 0x6BCE74;
-DWORD RoadReflectionResX = 0x0000000;
-DWORD RoadReflectionResY = 0x0000000;
+DWORD RoadReflectionResX;
+DWORD RoadReflectionResY;
 DWORD TrafficLightRestorationCodeCaveExit = 0x6DE9F8;
 DWORD TrafficLightFunctionJump = 0x507781;
 DWORD sub_505E80 = 0x505E80;
@@ -67,11 +64,11 @@ void __declspec(naked) HDReflectionBlurCodeCave()
 		jmp HDReflectionBlurCodeCavePart2
 
 		HDReflectionBlurCodeCaveConditional :
-		fild dword ptr ds : [ResolutionX]
+		fild dword ptr ds : [ResX]
 		fmul dword ptr ds : [RoadScale]
 		fistp dword ptr ds : [RoadReflectionResX]
 		push dword ptr ds : [RoadReflectionResX]
-		fild dword ptr ds : [ResolutionY]
+		fild dword ptr ds : [ResY]
 		fmul dword ptr ds : [RoadScale]
 		fistp dword ptr ds : [RoadReflectionResY]
 		push dword ptr ds : [RoadReflectionResY]
@@ -278,8 +275,8 @@ void Init()
 	CIniReader iniReader("NFSMWHDReflections.ini");
 
 	// Resolution
-	ResolutionX = iniReader.ReadInteger("RESOLUTION", "ResolutionX", 1920);
-	ResolutionY = iniReader.ReadInteger("RESOLUTION", "ResolutionY", 1080);
+	ResX = iniReader.ReadInteger("RESOLUTION", "ResolutionX", 0);
+	ResY = iniReader.ReadInteger("RESOLUTION", "ResolutionY", 0);
 	RoadScale = iniReader.ReadFloat("RESOLUTION", "RoadScale", 1.0);
 	VehicleScale = iniReader.ReadFloat("RESOLUTION", "VehicleScale", 1.0);
 	MirrorScale = iniReader.ReadFloat("RESOLUTION", "MirrorScale", 1.0);
@@ -300,6 +297,11 @@ void Init()
 	MirrorTintG = iniReader.ReadInteger("EXTRA", "MirrorTintG", 255);
 	MirrorTintB = iniReader.ReadInteger("EXTRA", "MirrorTintB", 255);
 
+	if (ResX <= 0 || ResY <= 0)
+	{
+		ResX = ::GetSystemMetrics(SM_CXSCREEN);
+		ResY = ::GetSystemMetrics(SM_CYSCREEN);
+	}
 
 	if (HDReflections)
 	{
@@ -307,19 +309,19 @@ void Init()
 		injector::MakeJMP(0x6BD4FC, RestoreFEReflectionCodeCave, true);
 		injector::MakeJMP(0x6BD52D, VehicleReflectionCodeCave, true);
 		// Road Reflection X
-		injector::WriteMemory<uint32_t>(0x6CFC26, ResolutionX * RoadScale, true);
-		injector::WriteMemory<uint32_t>(0x6BCDF5, ResolutionX * RoadScale, true);
-		injector::WriteMemory<uint32_t>(0x6BD17D, ResolutionX * RoadScale, true);
+		injector::WriteMemory<uint32_t>(0x6CFC26, ResX * RoadScale, true);
+		injector::WriteMemory<uint32_t>(0x6BCDF5, ResX * RoadScale, true);
+		injector::WriteMemory<uint32_t>(0x6BD17D, ResX * RoadScale, true);
 		// Road Reflection Y
-		injector::WriteMemory<uint32_t>(0x6BD184, ResolutionY * RoadScale, true);
-		injector::WriteMemory<uint32_t>(0x6CFC2D, ResolutionY * RoadScale, true);
-		injector::WriteMemory<uint32_t>(0x6BCDEF, ResolutionY * RoadScale, true);
+		injector::WriteMemory<uint32_t>(0x6BD184, ResY * RoadScale, true);
+		injector::WriteMemory<uint32_t>(0x6CFC2D, ResY * RoadScale, true);
+		injector::WriteMemory<uint32_t>(0x6BCDEF, ResY * RoadScale, true);
 		// Vehicle Reflection
-		injector::WriteMemory<uint32_t>(0x8F8FF4, ResolutionY * VehicleScale, true);
+		injector::WriteMemory<uint32_t>(0x8F8FF4, ResY * VehicleScale, true);
 		// RVM Reflection
 		// Aspect ratio is based on NFSU2 because true aspect ratio is unknown
-		injector::WriteMemory<uint32_t>(0x8F9008, ResolutionY * MirrorScale, true);
-		injector::WriteMemory<uint32_t>(0x8F900C, (ResolutionY / 3) * MirrorScale, true);
+		injector::WriteMemory<uint32_t>(0x8F9008, ResY * MirrorScale, true);
+		injector::WriteMemory<uint32_t>(0x8F900C, (ResY / 3) * MirrorScale, true);
 	}
 
 	if (ImproveReflectionLOD >= 1)
@@ -348,7 +350,7 @@ void Init()
 
 	if (GeometryFix)
 	{
-		injector::WriteMemory<uint8_t>(0x8FAE44, 0x00, true);
+		injector::WriteMemory<uint8_t>(0x6C69AE, 0xEB, true);
 	}
 
 	if (RestoreDetails >= 1)
