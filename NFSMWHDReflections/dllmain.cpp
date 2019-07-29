@@ -6,7 +6,7 @@
 #include "..\includes\IniReader.h"
 #include <d3d9.h>
 
-bool HDReflections, HDReflectionBlur, HDMirror, GeometryFix, RestoreShaders, OptimizeRenderDistance, MirrorTint, ExpandSlotPool;
+bool HDReflections, HDReflectionBlur, GeometryFix, RestoreShaders, OptimizeRenderDistance, MirrorTint, ExpandSlotPool;
 static int ResolutionX, ResolutionY, ImproveReflectionLOD, RestoreDetails, MirrorTintR, MirrorTintG, MirrorTintB;
 int ResX, ResY;
 static float RoadScale, VehicleScale, MirrorScale;
