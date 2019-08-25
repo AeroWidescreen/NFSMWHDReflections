@@ -10,7 +10,7 @@ bool HDReflections, HDReflectionBlur, GeometryFix, RestoreShaders, OptimizeRende
 static int ResolutionX, ResolutionY, ImproveReflectionLOD, RestoreDetails, MirrorTintR, MirrorTintG, MirrorTintB;
 int ResX, ResY;
 static float RoadScale, VehicleScale, MirrorScale;
-static float SkyboxRenderDistace = 0.1;
+static float SkyboxRenderDistance = 0.1;
 
 DWORD RestoreFEReflectionCodeCaveExit = 0x6BD502;
 DWORD VehicleReflectionCodeCaveExit = 0x6BD533;
@@ -35,6 +35,7 @@ DWORD RemoveRoadReflectionCodeCaveExit = 0x6D71F6;
 DWORD RemoveRoadReflectionCodeCavePart2Exit = 0x6D7264;
 DWORD RenderDistanceCodeCaveExit = 0x6E73A6;
 DWORD RenderDistanceCodeCaveExit2 = 0x6E73AB;
+DWORD SkyboxRenderDistanceCodeCaveExit = 0x6DB5C4;
 
 void __declspec(naked) RestoreFEReflectionCodeCave()
 {
@@ -162,8 +163,8 @@ void __declspec(naked) RemoveRoadReflectionCodeCave()
 {
 	__asm {
 		mov eax, dword ptr ds : [0x982A20]
-		cmp dword ptr ds : [eax + 0x04], 0x03
-		je RemoveRoadReflectionCodeCavePart2
+		cmp dword ptr ds : [eax + 0x04], 0x01
+		jne RemoveRoadReflectionCodeCavePart2
 		push ebp
 		mov ebp, esp
 		and esp, 0xFFFFFFF0
@@ -266,6 +267,25 @@ void __declspec(naked) RenderDistanceCodeCave()
 		RenderDistanceCodeCavePart3 :
 		push 0x43400000 // 192.0f
 		jmp RenderDistanceCodeCaveExit2
+	}
+}
+
+void __declspec(naked) SkyboxRenderDistanceCodeCave()
+{
+	__asm {
+		mov eax, dword ptr ds : [esp + 0x28]
+		cmp eax, 0x12 // checks for vehicle reflections
+		jnl SkyboxRenderDistanceCodeCavePart2
+		cmp eax, 0x03 // checks for rearview mirror
+		je SkyboxRenderDistanceCodeCavePart2
+		mov eax, [0x8F9360]
+		fld dword ptr ds : [0x8F935C]
+		jmp SkyboxRenderDistanceCodeCaveExit
+
+	SkyboxRenderDistanceCodeCavePart2:
+		mov eax, [0x8F9360]
+		fld dword ptr ds : [SkyboxRenderDistance]
+		jmp SkyboxRenderDistanceCodeCaveExit
 	}
 }
 
@@ -381,7 +401,7 @@ void Init()
 	if (OptimizeRenderDistance)
 	{
 		injector::MakeJMP(0x6E73A1, RenderDistanceCodeCave, true);
-		injector::WriteMemory(0x6DB5C0, &SkyboxRenderDistace, true);
+		injector::MakeJMP(0x6DB5BE, SkyboxRenderDistanceCodeCave, true);
 	}
 
 	if (MirrorTint)
