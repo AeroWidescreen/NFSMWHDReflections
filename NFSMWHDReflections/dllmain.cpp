@@ -27,8 +27,6 @@ DWORD sub_6E2F50 = 0x6E2F50;
 DWORD sub_503D00 = 0x503D00;
 DWORD EnableCarShadowCodeCaveExit = 0x74E843;
 DWORD EnableCarShadowCodeCaveJump = 0x74E818;
-DWORD EnableShadersCodeCaveExit = 0x6DABDB;
-DWORD EnableShadersCodeCaveJump = 0x6DABFC;
 DWORD EnableParticlesCodeCaveExit = 0x6DE9E8;
 DWORD MirrorRGBCodeCaveExit = 0x6E7126;
 DWORD RemoveRoadReflectionCodeCaveExit = 0x6D71F6;
@@ -132,21 +130,6 @@ void __declspec(naked) EnableCarShadowCodeCave()
 	}
 }
 
-void __declspec(naked) EnableShadersCodeCave()
-{
-	__asm {
-		cmp eax, 0x03
-		jle EnableShadersCodeCaveConditional
-		cmp dword ptr ds : [edi + 0x04], 0x00000000
-		je EnableShadersCodeCaveConditional
-		mov eax, dword ptr ds : [edi + 0x04]
-		jmp EnableShadersCodeCaveExit
-
-		EnableShadersCodeCaveConditional :
-		jmp EnableShadersCodeCaveJump
-	}
-}
-
 void __declspec(naked) EnableParticlesCodeCave()
 {
 	__asm {
@@ -211,6 +194,37 @@ void __declspec(naked) RemoveRoadReflectionCodeCave()
 		mov eax, dword ptr ds : [esi + 0x44]
 		// fstp dword ptr [esp+1C] removing instruction removes road reflection
 		jmp RemoveRoadReflectionCodeCavePart2Exit
+	}
+}
+
+void __declspec(naked) VehicleReflBrightnessCodeCave()
+{
+	__asm {
+		cmp dword ptr ds : [0x925E90], 0x06
+		jne VehicleReflBrightnessCodeCavePart3
+		push edx
+		mov edx, dword ptr ds : [0x982A20]
+		cmp dword ptr ds : [edx + 0x04], 0x11
+		jng VehicleReflBrightnessCodeCavePart2
+		cmp dword ptr ds : [edx + 0x04], 0x16
+		jg VehicleReflBrightnessCodeCavePart2
+		mov dword ptr ds : [esi + 0x20], 0x00000000 // R Ambient
+		mov dword ptr ds : [esi + 0x24], 0x00000000 // G Ambient
+		mov dword ptr ds : [esi + 0x28], 0x00000000 // B Ambient
+		mov dword ptr ds : [esi + 0x30], 0xC0000000 // R Diffuse
+		mov dword ptr ds : [esi + 0x34], 0xC0000000 // G Diffuse
+		mov dword ptr ds : [esi + 0x38], 0xC0000000 // B Diffuse
+		mov dword ptr ds : [esi + 0x40], 0x00000000 // R Specular
+		mov dword ptr ds : [esi + 0x44], 0x00000000 // G Specular
+		mov dword ptr ds : [esi + 0x48], 0x00000000 // B Specular
+		mov dword ptr ds : [esi + 0x3C], 0xBF000000 // Intensity
+		VehicleReflBrightnessCodeCavePart2:
+		pop edx
+		VehicleReflBrightnessCodeCavePart3:
+		pop esi
+		mov esp, ebp
+		pop ebp
+		ret 0004
 	}
 }
 
@@ -313,9 +327,9 @@ void Init()
 	// Extra
 	ExpandSlotPool = iniReader.ReadInteger("EXTRA", "ExpandSlotPool", 1);
 	MirrorTint = iniReader.ReadInteger("EXTRA", "MirrorTint", 1);
-	MirrorTintR = iniReader.ReadInteger("EXTRA", "MirrorTintR", 255);
-	MirrorTintG = iniReader.ReadInteger("EXTRA", "MirrorTintG", 255);
-	MirrorTintB = iniReader.ReadInteger("EXTRA", "MirrorTintB", 255);
+	MirrorTintR = iniReader.ReadInteger("EXTRA", "MirrorTintR", 150);
+	MirrorTintG = iniReader.ReadInteger("EXTRA", "MirrorTintG", 150);
+	MirrorTintB = iniReader.ReadInteger("EXTRA", "MirrorTintB", 150);
 
 	if (ResX <= 0 || ResY <= 0)
 	{
@@ -393,9 +407,11 @@ void Init()
 	{
 		// Enables all shader effects for reflections
 		// Credit to osdever for discovery
-		injector::MakeJMP(0x6DABD4, EnableShadersCodeCave, true);
+		injector::WriteMemory<uint8_t>(0x6DABD6, 0xEB, true);
 		// Removes road reflections from rearview mirror
 		injector::MakeJMP(0x6D71F0, RemoveRoadReflectionCodeCave, true);
+		// Corrects vehicle reflection brightness
+		injector::MakeJMP(0x7696A4, VehicleReflBrightnessCodeCave, true);
 	}
 
 	if (OptimizeRenderDistance)
