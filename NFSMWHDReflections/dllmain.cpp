@@ -5,12 +5,16 @@
 #include <cstdint>
 #include "..\includes\IniReader.h"
 #include <d3d9.h>
+#include <iostream>
 
 bool HDReflections, HDReflectionBlur, GeometryFix, RestoreShaders, OptimizeRenderDistance, MirrorTint, ExpandSlotPool;
 static int ResolutionX, ResolutionY, ImproveReflectionLOD, RestoreDetails, MirrorTintR, MirrorTintG, MirrorTintB;
 int ResX, ResY;
 static float RoadScale, VehicleScale, MirrorScale;
 static float SkyboxRenderDistance = 0.1;
+float RGBAmbient = 0.5f;
+float RGBDiffuse = 0.75f;
+float RGBSpecular = 0.0f;
 
 DWORD RestoreFEReflectionCodeCaveExit = 0x6BD502;
 DWORD VehicleReflectionCodeCaveExit = 0x6BD533;
@@ -29,11 +33,22 @@ DWORD EnableCarShadowCodeCaveExit = 0x74E843;
 DWORD EnableCarShadowCodeCaveJump = 0x74E818;
 DWORD EnableParticlesCodeCaveExit = 0x6DE9E8;
 DWORD MirrorRGBCodeCaveExit = 0x6E7126;
-DWORD RemoveRoadReflectionCodeCaveExit = 0x6D71F6;
-DWORD RemoveRoadReflectionCodeCavePart2Exit = 0x6D7264;
+DWORD RemoveRoadReflectionCodeCaveExit = 0x6D7264;
+DWORD RemoveRoadReflectionCodeCaveExit2 = 0x6D73F3;
 DWORD RenderDistanceCodeCaveExit = 0x6E73A6;
 DWORD RenderDistanceCodeCaveExit2 = 0x6E73AB;
 DWORD SkyboxRenderDistanceCodeCaveExit = 0x6DB5C4;
+DWORD ReflShadowOpacityCodeCaveExit1 = 0x6E043C;
+DWORD ReflShadowOpacityCodeCaveExit2 = 0x6E0445;
+DWORD VehicleReflBrightnessBugFixCodeCaveExit = 0x6DA52F;
+DWORD sub_7538D0 = 0x7538D0;
+DWORD DestroyedObjectCodeCaveExit = 0x6DE996;
+DWORD sub_6C00D0 = 0x6C00D0;
+DWORD sub_6D04E0 = 0x6D04E0;
+DWORD SunflareArray[50];
+DWORD SunflareCodeCave1Exit = 0x6DB265;
+DWORD SunflareCodeCave2Exit = 0x6E6DB2;
+DWORD SunflareCodeCave3Exit = 0x6DB120;
 
 void __declspec(naked) RestoreFEReflectionCodeCave()
 {
@@ -62,7 +77,7 @@ void __declspec(naked) HDReflectionBlurCodeCave()
 		push eax
 		jmp HDReflectionBlurCodeCavePart2
 
-		HDReflectionBlurCodeCaveConditional :
+	HDReflectionBlurCodeCaveConditional:
 		fild dword ptr ds : [ResX]
 		fmul dword ptr ds : [RoadScale]
 		fistp dword ptr ds : [RoadReflectionResX]
@@ -74,7 +89,7 @@ void __declspec(naked) HDReflectionBlurCodeCave()
 		push eax
 		jmp HDReflectionBlurCodeCavePart2
 		
-	HDReflectionBlurCodeCavePart2 :
+	HDReflectionBlurCodeCavePart2:
 		call dword ptr ds : [ecx + 0x5C]
 		jmp HDReflectionBlurCodeCaveExit
 	}
@@ -95,7 +110,7 @@ void __declspec(naked) TrafficLightRestorationCodeCave()
 		push edi
 		mov edi, dword ptr ds : [esp + 0x14]
 		mov ecx, dword ptr ds : [edi + 0x04]
-		mov eax, 0x02 // Removes buggy sun flare in RVM
+		mov eax, 0x02 // Removes vehicle sunflare from RVM
 		jmp TrafficLightFunctionJump
 	}
 }
@@ -104,7 +119,7 @@ void __declspec(naked) FlareAndShadowLayeringCodeCave()
 {
 	__asm {
 		push 01
-		push 0x00919730
+		push 0x919730
 		lea ecx, dword ptr ds : [esp + 0xE8]
 		call sub_723FA0
 		call sub_6E2F50
@@ -112,6 +127,9 @@ void __declspec(naked) FlareAndShadowLayeringCodeCave()
 		push 0x00919730
 		call sub_750B10
 		call sub_6E2F50
+		push 0x919730
+		lea ecx, dword ptr ds : [SunflareArray]
+		call sub_6D04E0
 		jmp FlareAndShadowLayeringCodeCaveExit
 	}
 }
@@ -146,54 +164,30 @@ void __declspec(naked) RemoveRoadReflectionCodeCave()
 {
 	__asm {
 		mov eax, dword ptr ds : [0x982A20]
-		cmp dword ptr ds : [eax + 0x04], 0x01
+		mov eax, dword ptr ds : [eax + 0x04]
+		imul eax, eax, 0x70
+		mov eax, dword ptr ds : [eax + 0x9195E4]
+		cmp eax, 0x01
 		jne RemoveRoadReflectionCodeCavePart2
-		push ebp
-		mov ebp, esp
-		and esp, 0xFFFFFFF0
+		fstp dword ptr ds : [esp + 0x1C]
+		mov eax, dword ptr ds : [esi + 0x44]
 		jmp RemoveRoadReflectionCodeCaveExit
 
 	RemoveRoadReflectionCodeCavePart2:
-		push ebp
-		mov ebp, esp
-		and esp, 0xFFFFFFF0
-		sub esp, 0x58
-		mov eax, dword ptr ds : [0x982A20]
-		test eax, eax
-		push esi
-		push edi
-		mov esi, ecx
-		mov eax, dword ptr ds : [eax + 0x04]
-		fld dword ptr ds : [0x890968]
-		mov ecx, dword ptr ds : [0x9B392C]
-		imul eax, eax, 0x70
-		add eax, 0x9195E0
-		mov eax, dword ptr ds : [eax + 0x68]
-		test eax, eax
-		je RemoveRoadReflectionCodeCavePart2Jump1
-		fstp st(0)
-		fld dword ptr ds : [eax + 0x290]
-
-		RemoveRoadReflectionCodeCavePart2Jump1:
-		test eax, eax
-		fsubr dword ptr ds : [0x89096C]
-		fld st(0)
-		fmul dword ptr ds : [ecx + 0x40]
-		fstp dword ptr ds : [esp + 0x10]
-		fld st(0)
-		fmul dword ptr ds : [ecx + 0x44]
-		fstp dword ptr ds : [esp + 0x14]
-		fmul dword ptr ds : [ecx + 0x48]
-		fstp dword ptr ds : [esp + 0x18]
-		fld dword ptr ds : [0x890968]
-		je RemoveRoadReflectionCodeCavePart2Jump2
-		fstp st(0)
-		fld dword ptr ds : [eax + 0x36A0]
-
-		RemoveRoadReflectionCodeCavePart2Jump2:
 		mov eax, dword ptr ds : [esi + 0x44]
-		// fstp dword ptr [esp+1C] removing instruction removes road reflection
-		jmp RemoveRoadReflectionCodeCavePart2Exit
+		mov ecx, dword ptr ds : [eax + 0x0C7C]
+		test ecx, ecx
+		je RemoveRoadReflectionCodeCavePart3
+		mov eax, dword ptr ds : [esi + 0x48]
+		mov edx, dword ptr ds : [eax]
+		lea edi, dword ptr ds : [esp + 0x10]
+		push edi
+		push ecx
+		push eax
+		call dword ptr ds : [edx + 0x88]
+
+	RemoveRoadReflectionCodeCavePart3:
+		jmp RemoveRoadReflectionCodeCaveExit2
 	}
 }
 
@@ -204,27 +198,57 @@ void __declspec(naked) VehicleReflBrightnessCodeCave()
 		jne VehicleReflBrightnessCodeCavePart3
 		push edx
 		mov edx, dword ptr ds : [0x982A20]
-		cmp dword ptr ds : [edx + 0x04], 0x11
+		mov edx, dword ptr ds : [edx + 0x04]
+		imul edx, edx, 0x70
+		mov edx, dword ptr ds : [edx + 0x9195E4]
+		cmp edx, 0x11
 		jng VehicleReflBrightnessCodeCavePart2
-		cmp dword ptr ds : [edx + 0x04], 0x16
+		cmp edx, 0x16
 		jg VehicleReflBrightnessCodeCavePart2
-		mov dword ptr ds : [esi + 0x20], 0x00000000 // R Ambient
-		mov dword ptr ds : [esi + 0x24], 0x00000000 // G Ambient
-		mov dword ptr ds : [esi + 0x28], 0x00000000 // B Ambient
-		mov dword ptr ds : [esi + 0x30], 0xC0000000 // R Diffuse
-		mov dword ptr ds : [esi + 0x34], 0xC0000000 // G Diffuse
-		mov dword ptr ds : [esi + 0x38], 0xC0000000 // B Diffuse
-		mov dword ptr ds : [esi + 0x40], 0x00000000 // R Specular
-		mov dword ptr ds : [esi + 0x44], 0x00000000 // G Specular
-		mov dword ptr ds : [esi + 0x48], 0x00000000 // B Specular
-		mov dword ptr ds : [esi + 0x3C], 0xBF000000 // Intensity
-		VehicleReflBrightnessCodeCavePart2:
+		fld dword ptr ds : [esi + 0x20]
+		fmul dword ptr ds : [RGBAmbient]
+		fstp dword ptr ds : [esi + 0x20]
+		fld dword ptr ds : [esi + 0x24]
+		fmul dword ptr ds : [RGBAmbient]
+		fstp dword ptr ds : [esi + 0x24]
+		fld dword ptr ds : [esi + 0x28]
+		fmul dword ptr ds : [RGBAmbient]
+		fstp dword ptr ds : [esi + 0x28]
+		fld dword ptr ds : [esi + 0x30]
+		fmul dword ptr ds : [RGBDiffuse]
+		fstp dword ptr ds : [esi + 0x30]
+		fld dword ptr ds : [esi + 0x34]
+		fmul dword ptr ds : [RGBDiffuse]
+		fstp dword ptr ds : [esi + 0x34]
+		fld dword ptr ds : [esi + 0x38]
+		fmul dword ptr ds : [RGBDiffuse]
+		fstp dword ptr ds : [esi + 0x38]
+		fld dword ptr ds : [esi + 0x40]
+		fmul dword ptr ds : [RGBSpecular]
+		fstp dword ptr ds : [esi + 0x40]
+		fld dword ptr ds : [esi + 0x44]
+		fmul dword ptr ds : [RGBSpecular]
+		fstp dword ptr ds : [esi + 0x44]
+		fld dword ptr ds : [esi + 0x48]
+		fmul dword ptr ds : [RGBSpecular]
+		fstp dword ptr ds : [esi + 0x48]
+	
+	VehicleReflBrightnessCodeCavePart2:
 		pop edx
-		VehicleReflBrightnessCodeCavePart3:
+	VehicleReflBrightnessCodeCavePart3:
 		pop esi
 		mov esp, ebp
 		pop ebp
 		ret 0004
+	}
+}
+
+void __declspec(naked) VehicleReflBrightnessBugFixCodeCave()
+{
+	__asm {
+		div dword ptr ds : [ecx * 0x04 + 0x8F9018]
+		mov ecx, 0x00000003 // overwrites reflection setting
+		jmp VehicleReflBrightnessBugFixCodeCaveExit
 	}
 }
 
@@ -273,12 +297,12 @@ void __declspec(naked) RenderDistanceCodeCave()
 		je RenderDistanceCodeCavePart3
 		jmp RenderDistanceCodeCaveExit
 
-		RenderDistanceCodeCavePart2 :
+	RenderDistanceCodeCavePart2:
 		cmp dword ptr ds : [esi + 0x04], 0x03
 		push 0x42C80000 // 100.0f
 		jmp RenderDistanceCodeCaveExit2
 
-		RenderDistanceCodeCavePart3 :
+	RenderDistanceCodeCavePart3:
 		push 0x43400000 // 192.0f
 		jmp RenderDistanceCodeCaveExit2
 	}
@@ -300,6 +324,84 @@ void __declspec(naked) SkyboxRenderDistanceCodeCave()
 		mov eax, [0x8F9360]
 		fld dword ptr ds : [SkyboxRenderDistance]
 		jmp SkyboxRenderDistanceCodeCaveExit
+	}
+}
+
+void __declspec(naked) ReflShadowOpacityCodeCave()
+{
+	__asm {
+		mov eax, dword ptr ds : [0x982A20]
+		cmp dword ptr ds : [eax + 0x04], 0x01
+		fld dword ptr ds : [0x89096C]
+		jne	ReflShadowOpacityCodeCavePart2
+		jmp ReflShadowOpacityCodeCaveExit1
+	
+	ReflShadowOpacityCodeCavePart2:
+		mov eax, dword ptr ds : [esi + 0x40]
+		jmp ReflShadowOpacityCodeCaveExit2
+	}
+}
+
+void __declspec(naked) DestroyedObjectCodeCave()
+{
+	__asm {
+		push 0x00000000
+		push 0x919730
+		call sub_7538D0
+		add esp,0x08
+		mov ecx, dword ptr ds : [0x93DEBC]
+		jmp DestroyedObjectCodeCaveExit
+	}
+}
+
+void __declspec(naked) SunflareCodeCave1()
+{
+	__asm {
+		call sub_6C00D0
+		lea ecx, dword ptr ds : [SunflareArray]
+		call sub_6C00D0
+		jmp SunflareCodeCave1Exit
+	}
+}
+
+void __declspec(naked) SunflareCodeCave2()
+{
+	__asm {
+		call sub_6C00D0
+		lea ecx, dword ptr ds : [SunflareArray]
+		call sub_6C00D0
+		jmp SunflareCodeCave2Exit
+	}
+}
+
+void __declspec(naked) SunflareCodeCave3()
+{
+	__asm {
+		lea esi, dword ptr ds : [SunflareArray]
+		add esi, 0x24
+		call SunflareCodeCave3Sub
+		mov esi, 0x93E03C
+		call SunflareCodeCave3Sub
+		jmp SunflareCodeCave3Exit
+
+	SunflareCodeCave3Sub:
+		mov edi, esi
+		add edi, 0x10
+	
+	SunflareCodeCave3SubConditional2:
+		mov eax, dword ptr ds : [esi]
+		mov edx, dword ptr ds : [eax]
+		test eax,eax
+		je SunflareCodeCave3SubConditional1
+		push eax
+		call dword ptr ds : [edx + 0x08]
+		mov dword ptr ds : [esi], 0x00000000
+	
+	SunflareCodeCave3SubConditional1:
+		add esi, 0x04
+		cmp esi, edi
+		jl SunflareCodeCave3SubConditional2
+		ret
 	}
 }
 
@@ -361,15 +463,19 @@ void Init()
 	if (ImproveReflectionLOD >= 1)
 	{
 		// Vehicle Reflection LOD
-		injector::WriteMemory<uint32_t>(0x6BFEBD, 0x00000000, true);
+		injector::WriteMemory<uint32_t>(0x6BFEBD, 0x00006016, true);
 		// RVM LOD
-		injector::WriteMemory<uint32_t>(0x6BFE58, 0x00000000, true);
+		injector::WriteMemory<uint32_t>(0x6BFE58, 0x00006016, true);
+		injector::WriteMemory<uint8_t>(0x6BFE3D, 0xEB, true);
 		// Road Reflection LOD
 		injector::WriteMemory<uint8_t>(0x4FAE9A, 0xEB, true);
 		
 		if (ImproveReflectionLOD >= 2)
 		// Full RVM LOD
 		injector::WriteMemory<uint8_t>(0x4FAEB0, 0xEB, true);
+		if (ImproveReflectionLOD >= 2)
+		// Allows destroyed objects to remain visible in RVM
+		injector::MakeJMP(0x6DE990, DestroyedObjectCodeCave, true);
 		// Full Road Reflection LOD
 		if (ImproveReflectionLOD >= 2)
 		injector::WriteMemory<uint8_t>(0x6BFF21, 0x06, true);
@@ -392,6 +498,10 @@ void Init()
 		// Adds missing traffic lights to the rearview mirror
 		injector::MakeJMP(0x6DE9F0, TrafficLightRestorationCodeCave, true);
 		// Solves flare and car shadow layering issue
+		// Adds missing sunflare to the rearview mirror
+		injector::MakeJMP(0x6DB260, SunflareCodeCave1, true);
+		injector::MakeJMP(0x6E6DAD, SunflareCodeCave2, true);
+		injector::MakeJMP(0x6DB0FE, SunflareCodeCave3, true);
 		injector::MakeJMP(0x6DE96D, FlareAndShadowLayeringCodeCave, true);
 		// Solves flare culling issue 
 		injector::WriteMemory<uint8_t>(0x729479, 0xEB, true);
@@ -408,10 +518,14 @@ void Init()
 		// Enables all shader effects for reflections
 		// Credit to osdever for discovery
 		injector::WriteMemory<uint8_t>(0x6DABD6, 0xEB, true);
-		// Removes road reflections from rearview mirror
-		injector::MakeJMP(0x6D71F0, RemoveRoadReflectionCodeCave, true);
+		// Removes road reflection from rearview mirror
+		injector::MakeJMP(0x6D725D, RemoveRoadReflectionCodeCave, true);
+		// Removes dynamic shadows from reflections
+		injector::MakeJMP(0x6E0436, ReflShadowOpacityCodeCave, true);
 		// Corrects vehicle reflection brightness
 		injector::MakeJMP(0x7696A4, VehicleReflBrightnessCodeCave, true);
+		// Fixes flashing when low reflection update rate is used
+		injector::MakeJMP(0x6DA528, VehicleReflBrightnessBugFixCodeCave, true);
 	}
 
 	if (OptimizeRenderDistance)
