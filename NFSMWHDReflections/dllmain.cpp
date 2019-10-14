@@ -49,6 +49,8 @@ DWORD SunflareArray[50];
 DWORD SunflareCodeCave1Exit = 0x6DB265;
 DWORD SunflareCodeCave2Exit = 0x6E6DB2;
 DWORD SunflareCodeCave3Exit = 0x6DB120;
+DWORD LODBypassCodeCaveExit1 = 0x6BFE44;
+DWORD LODBypassCodeCaveExit2 = 0x6BFE57;
 
 void __declspec(naked) RestoreFEReflectionCodeCave()
 {
@@ -405,6 +407,23 @@ void __declspec(naked) SunflareCodeCave3()
 	}
 }
 
+void __declspec(naked) LODBypassCodeCave()
+{
+	__asm {
+		cmp esi, 0x919730
+		je LODBypassCodeCavePart2
+		mov ecx, [0x982AF4]
+		test ecx, ecx
+		jne LODBypassCodeCavePart2
+		xor ecx, ecx
+		cmp ebx, 0x03
+		jmp LODBypassCodeCaveExit1
+
+	LODBypassCodeCavePart2:
+		jmp LODBypassCodeCaveExit2
+	}
+}
+
 void Init()
 {
 	// Read values from .ini
@@ -463,10 +482,12 @@ void Init()
 	if (ImproveReflectionLOD >= 1)
 	{
 		// Vehicle Reflection LOD
-		injector::WriteMemory<uint32_t>(0x6BFEBD, 0x00006016, true);
+		injector::WriteMemory<uint32_t>(0x6BFEBD, 0x00006002, true);
 		// RVM LOD
-		injector::WriteMemory<uint32_t>(0x6BFE58, 0x00006016, true);
-		injector::WriteMemory<uint8_t>(0x6BFE3D, 0xEB, true);
+		injector::WriteMemory<uint32_t>(0x6BFE58, 0x00006002, true);
+		// Bypasses widescreen fix LOD changes
+		injector::MakeJMP(0x6BFE3D, LODBypassCodeCave, true);
+		injector::MakeNOP(0x6BFE42, 1, true);
 		// Road Reflection LOD
 		injector::WriteMemory<uint8_t>(0x4FAE9A, 0xEB, true);
 		
