@@ -8,10 +8,10 @@
 #include <iostream>
 
 bool HDReflections, HDReflectionBlur, GeometryFix, RestoreShaders, OptimizeRenderDistance, MirrorTint, ExpandSlotPool;
-static int ResolutionX, ResolutionY, ImproveReflectionLOD, RestoreDetails, MirrorTintR, MirrorTintG, MirrorTintB;
+int ResolutionX, ResolutionY, ImproveReflectionLOD, RestoreDetails, MirrorTintR, MirrorTintG, MirrorTintB;
 int ResX, ResY;
-static float RoadScale, VehicleScale, MirrorScale;
-static float SkyboxRenderDistance = 0.1;
+float RoadScale, VehicleScale, MirrorScale;
+float SkyboxRenderDistance = 0.1f;
 float RGBAmbient = 0.5f;
 float RGBDiffuse = 0.75f;
 float RGBSpecular = 0.0f;
