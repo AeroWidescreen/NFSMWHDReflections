@@ -5,7 +5,6 @@
 #include <cstdint>
 #include "..\includes\IniReader.h"
 #include <d3d9.h>
-#include <iostream>
 
 bool HDReflections, HDReflectionBlur, GeometryFix, RestoreShaders, OptimizeRenderDistance, MirrorTint, ExpandSlotPool;
 int ResolutionX, ResolutionY, ImproveReflectionLOD, RestoreDetails, MirrorTintR, MirrorTintG, MirrorTintB;
@@ -571,7 +570,6 @@ void Init()
 	}
 }
 	
-
 BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
 {
 	if (reason == DLL_PROCESS_ATTACH)
@@ -590,5 +588,4 @@ BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
 		}
 	}
 	return TRUE;
-	
 }
