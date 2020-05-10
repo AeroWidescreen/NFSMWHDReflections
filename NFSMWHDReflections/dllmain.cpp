@@ -10,7 +10,7 @@ bool HDReflections, HDReflectionBlur, GeometryFix, RestoreShaders, OptimizeRende
 int ResolutionX, ResolutionY, ImproveReflectionLOD, RestoreDetails, MirrorTintR, MirrorTintG, MirrorTintB;
 int ResX, ResY;
 float RoadScale, VehicleScale, MirrorScale;
-float SkyboxRenderDistance = 0.1f;
+float SkyboxRenderDistance = 0.5f;
 float RGBAmbient = 0.5f;
 float RGBDiffuse = 0.75f;
 float RGBSpecular = 0.0f;
@@ -312,17 +312,19 @@ void __declspec(naked) RenderDistanceCodeCave()
 void __declspec(naked) SkyboxRenderDistanceCodeCave()
 {
 	__asm {
-		mov eax, dword ptr ds : [esp + 0x28]
+		mov eax, dword ptr ds : [0x982A20]
+		mov eax, dword ptr ds : [eax + 0x04]
+		imul eax, eax, 0x70
+		mov eax, dword ptr ds : [eax + 0x9195E4]
+
 		cmp eax, 0x12 // checks for vehicle reflections
 		jnl SkyboxRenderDistanceCodeCavePart2
 		cmp eax, 0x03 // checks for rearview mirror
 		je SkyboxRenderDistanceCodeCavePart2
-		mov eax, [0x8F9360]
 		fld dword ptr ds : [0x8F935C]
 		jmp SkyboxRenderDistanceCodeCaveExit
 
 	SkyboxRenderDistanceCodeCavePart2:
-		mov eax, [0x8F9360]
 		fld dword ptr ds : [SkyboxRenderDistance]
 		jmp SkyboxRenderDistanceCodeCaveExit
 	}
@@ -551,6 +553,7 @@ void Init()
 	if (OptimizeRenderDistance)
 	{
 		injector::MakeJMP(0x6E73A1, RenderDistanceCodeCave, true);
+		injector::MakeNOP(0x6DB5AB, 6, true);
 		injector::MakeJMP(0x6DB5BE, SkyboxRenderDistanceCodeCave, true);
 	}
 
@@ -569,6 +572,7 @@ void Init()
 		injector::WriteMemory<uint32_t>(0x500A12, 0xFA000, true);
 	}
 }
+
 	
 BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
 {
