@@ -9,7 +9,7 @@
 bool HDReflections, HDReflectionBlur, GeometryFix, RestoreShaders, OptimizeRenderDistance, MirrorTint, ExpandSlotPool;
 int ResolutionX, ResolutionY, ImproveReflectionLOD, RestoreDetails, MirrorTintR, MirrorTintG, MirrorTintB;
 int ResX, ResY;
-float RoadScale, VehicleScale, MirrorScale;
+float RoadScale, VehicleScale, MirrorScale, VehicleReflectionBrightness;
 float SkyboxRenderDistance = 0.5f;
 float RGBAmbient = 0.5f;
 float RGBDiffuse = 0.75f;
@@ -445,6 +445,7 @@ void Init()
 	RestoreDetails = iniReader.ReadInteger("GENERAL", "RestoreDetails", 1);
 	RestoreShaders = iniReader.ReadInteger("GENERAL", "RestoreShaders", 1);
 	OptimizeRenderDistance = iniReader.ReadInteger("GENERAL", "OptimizeRenderDistance", 1);
+	VehicleReflectionBrightness = iniReader.ReadFloat("GENERAL", "VehicleReflectionBrightness", 1.0);
 
 	// Extra
 	ExpandSlotPool = iniReader.ReadInteger("EXTRA", "ExpandSlotPool", 1);
@@ -555,6 +556,14 @@ void Init()
 		injector::MakeJMP(0x6E73A1, RenderDistanceCodeCave, true);
 		injector::MakeNOP(0x6DB5AB, 6, true);
 		injector::MakeJMP(0x6DB5BE, SkyboxRenderDistanceCodeCave, true);
+	}
+
+	if (VehicleReflectionBrightness)
+	{
+		static float VehicleReflectionIntensity1 = (0.5f * VehicleReflectionBrightness);
+		static float VehicleReflectionIntensity2 = (1.0f * VehicleReflectionBrightness);
+		injector::WriteMemory(0x6C77CE, &VehicleReflectionIntensity1, true);
+		injector::WriteMemory(0x6C77D6, &VehicleReflectionIntensity2, true);
 	}
 
 	if (MirrorTint)
