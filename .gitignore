@@ -24,3 +24,9 @@ NFSMWHDReflections/Release/NFSMWHDReflections/scripts/NFSMWHDReflections.ipdb
 NFSMWHDReflections/Release/NFSMWHDReflections/scripts/NFSMWHDReflections.pdb
 NFSMWHDReflections/Release/stdafx.obj
 NFSMWHDReflections/Release/vc142.pdb
+*.db-shm
+*.db-wal
+*.opendb
+*.ipch
+*.log
+*.txt

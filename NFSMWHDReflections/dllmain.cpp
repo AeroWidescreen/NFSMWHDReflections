@@ -6,9 +6,12 @@
 #include "..\includes\IniReader.h"
 #include <d3d9.h>
 
-bool HDReflections, HDReflectionBlur, GeometryFix, RestoreShaders, OptimizeRenderDistance, MirrorTint, ExpandSlotPool;
-int ResolutionX, ResolutionY, ImproveReflectionLOD, RestoreDetails, MirrorTintR, MirrorTintG, MirrorTintB;
-int ResX, ResY;
+bool HDReflections, GeometryFix, RestoreShaders, RestoreVisualTreatment, OptimizeRenderDistance, ExpandMemoryPool;
+int ImproveReflectionLOD, RestoreDetails;
+int RoadResX = 320;
+int RoadResY = 240;
+int VehicleRes = 256;
+int MirrorRes = 256;
 float RoadScale, VehicleScale, MirrorScale, VehicleReflectionBrightness;
 float SkyboxRenderDistance = 0.5f;
 float RGBAmbient = 0.5f;
@@ -32,8 +35,7 @@ DWORD EnableCarShadowCodeCaveExit = 0x74E843;
 DWORD EnableCarShadowCodeCaveJump = 0x74E818;
 DWORD EnableParticlesCodeCaveExit = 0x6DE9E8;
 DWORD MirrorRGBCodeCaveExit = 0x6E7126;
-DWORD RemoveRoadReflectionCodeCaveExit = 0x6D7264;
-DWORD RemoveRoadReflectionCodeCaveExit2 = 0x6D73F3;
+DWORD RemoveRoadReflectionCodeCaveExit = 0x6D728F;
 DWORD RenderDistanceCodeCaveExit = 0x6E73A6;
 DWORD RenderDistanceCodeCaveExit2 = 0x6E73AB;
 DWORD SkyboxRenderDistanceCodeCaveExit = 0x6DB5C4;
@@ -51,6 +53,21 @@ DWORD SunflareCodeCave3Exit = 0x6DB120;
 DWORD LODBypassCodeCaveExit1 = 0x6BFE44;
 DWORD LODBypassCodeCaveExit2 = 0x6BFE57;
 
+// Value1, Value4, Value7, Value10 = Brightness
+// Value2, Value3, Value5, Value6, Value8, Value9 = Overlay Size
+float VisualTreatmentArray[] = {0.25f, 0.0f, 0.0f, 0.25f, 0.0f, 0.0f, 0.25f, 0.0f, 0.0f, 0.25f, 0.0f, 0.0f};
+DWORD VisualTreatmentEnablerCodeCave1_Exit = 0x6DE9FE;
+DWORD sub_0x6DBEC0 = 0x6DBEC0;
+DWORD sub_0x6DBFE0 = 0x6DBFE0;
+DWORD sub_0x6D53D0 = 0x6D53D0;
+DWORD VisualTreatmentEnablerCodeCave2_Exit = 0x6DBF3F;
+DWORD VisualTreatmentEnablerCodeCave3_Exit = 0x6DBFB5;
+DWORD VisualTreatmentEnablerCodeCave3_Exit2 = 0x6DBFC8;
+DWORD sub_0x6D2CD0 = 0x6D2CD0;
+DWORD VisualTreatmentEnablerCodeCave4_Exit = 0x6D5433;
+DWORD VisualTreatmentEnablerCodeCave5_Exit = 0x6D54BD;
+DWORD VisualTreatmentEnablerCodeCave6_Exit = 0x6D54A0;
+
 void __declspec(naked) RestoreFEReflectionCodeCave()
 {
 	__asm {
@@ -65,34 +82,6 @@ void __declspec(naked) VehicleReflectionCodeCave()
 		mov edi, dword ptr ds : [0x8F8FF4]
 		mov edx, dword ptr ds : [0x8F8FF8]
 		jmp VehicleReflectionCodeCaveExit
-	}
-}
-
-void __declspec(naked) HDReflectionBlurCodeCave()
-{
-	__asm {
-		cmp byte ptr ds : [HDReflectionBlur], 0x01
-		je HDReflectionBlurCodeCaveConditional
-		push 0x000000F0 // 240
-		push 0x00000140 // 320
-		push eax
-		jmp HDReflectionBlurCodeCavePart2
-
-	HDReflectionBlurCodeCaveConditional:
-		fild dword ptr ds : [ResX]
-		fmul dword ptr ds : [RoadScale]
-		fistp dword ptr ds : [RoadReflectionResX]
-		push dword ptr ds : [RoadReflectionResX]
-		fild dword ptr ds : [ResY]
-		fmul dword ptr ds : [RoadScale]
-		fistp dword ptr ds : [RoadReflectionResY]
-		push dword ptr ds : [RoadReflectionResY]
-		push eax
-		jmp HDReflectionBlurCodeCavePart2
-		
-	HDReflectionBlurCodeCavePart2:
-		call dword ptr ds : [ecx + 0x5C]
-		jmp HDReflectionBlurCodeCaveExit
 	}
 }
 
@@ -163,32 +152,21 @@ void __declspec(naked) EnableParticlesCodeCave()
 
 void __declspec(naked) RemoveRoadReflectionCodeCave()
 {
-	__asm {
-		mov eax, dword ptr ds : [0x982A20]
-		mov eax, dword ptr ds : [eax + 0x04]
-		imul eax, eax, 0x70
-		mov eax, dword ptr ds : [eax + 0x9195E4]
-		cmp eax, 0x01
-		jne RemoveRoadReflectionCodeCavePart2
-		fstp dword ptr ds : [esp + 0x1C]
-		mov eax, dword ptr ds : [esi + 0x44]
+	__asm 
+	{
+		mov edi, dword ptr ds : [0x982A20]
+		mov edi, dword ptr ds : [edi + 0x04]
+		imul edi, edi, 0x70
+		mov edi, dword ptr ds : [edi + 0x9195E4]
+		cmp edi, 0x01
+		je RemoveRoadReflectionCodeCave_IsMAIN
+		
+		mov edi, 0x00000000
 		jmp RemoveRoadReflectionCodeCaveExit
 
-	RemoveRoadReflectionCodeCavePart2:
-		mov eax, dword ptr ds : [esi + 0x44]
-		mov ecx, dword ptr ds : [eax + 0x0C7C]
-		test ecx, ecx
-		je RemoveRoadReflectionCodeCavePart3
-		mov eax, dword ptr ds : [esi + 0x48]
-		mov edx, dword ptr ds : [eax]
-		lea edi, dword ptr ds : [esp + 0x10]
-		push edi
-		push ecx
-		push eax
-		call dword ptr ds : [edx + 0x88]
-
-	RemoveRoadReflectionCodeCavePart3:
-		jmp RemoveRoadReflectionCodeCaveExit2
+	RemoveRoadReflectionCodeCave_IsMAIN:
+		mov edi, dword ptr ds : [0x982A6C]
+		jmp RemoveRoadReflectionCodeCaveExit
 	}
 }
 
@@ -255,34 +233,14 @@ void __declspec(naked) VehicleReflBrightnessBugFixCodeCave()
 
 void __declspec(naked) MirrorRGBCodeCave()
 {
-	__asm {
-		mov byte ptr ds : [eax], 0xFF // Alpha
-		push ebx
-		mov ebx, dword ptr ds : [MirrorTintR]
-		call MirrorRGBValueCheckCodeCave
-		mov byte ptr ds : [eax - 0x03], bl // Red
-		mov ebx, dword ptr ds : [MirrorTintG]
-		call MirrorRGBValueCheckCodeCave
-		mov byte ptr ds : [eax - 0x02], bl // Green
-		mov ebx, dword ptr ds : [MirrorTintB]
-		call MirrorRGBValueCheckCodeCave
-		mov byte ptr ds : [eax - 0x01], bl // Blue
-		pop ebx
+	__asm 
+	{
+		mov byte ptr ds : [eax], 0xFF // Alpha: 255
+		mov byte ptr ds : [eax - 0x03], 0x80 // Red: 128
+		mov byte ptr ds : [eax - 0x02], 0x80 // Green: 128
+		mov byte ptr ds : [eax - 0x01], 0x80 // Blue: 128
 		add eax, 0x04
 		jmp MirrorRGBCodeCaveExit
-
-	MirrorRGBValueCheckCodeCave:
-		cmp ebx, 0x000000FF
-		jg MirrorRGBValueCheckCodeCaveMax
-		cmp ebx, 0x00000000
-		jl MirrorRGBValueCheckCodeCaveMin
-		ret
-		MirrorRGBValueCheckCodeCaveMax:
-		mov ebx, 0x000000FF
-		ret
-		MirrorRGBValueCheckCodeCaveMin:
-		mov ebx, 0x00000000
-		ret
 	}
 }
 
@@ -425,60 +383,234 @@ void __declspec(naked) LODBypassCodeCave()
 	}
 }
 
+void __declspec(naked) VisualTreatmentEnablerCodeCave1()
+{
+	__asm 
+	{
+		mov ecx, dword ptr ds : [0x982AF0]
+		cmp ecx, 0x00 // prevents crash
+		je VisualTreatmentEnablerCodeCave1_None
+		call sub_0x6DBEC0
+		call sub_0x6DBFE0
+		movzx ecx, byte ptr ds : [0x901828] // checks if visual treatment is enabled
+		push ecx
+		mov ecx, dword ptr ds : [0x982AF0]
+		call sub_0x6D53D0
+
+		VisualTreatmentEnablerCodeCave1_None:
+		mov ecx, dword ptr ds : [0x93DEBC]
+		jmp VisualTreatmentEnablerCodeCave1_Exit
+	}
+}
+
+void __declspec(naked) VisualTreatmentEnablerCodeCave2()
+{
+	__asm
+	{
+		mov ecx, dword ptr ds : [0x982A20]
+		mov ecx, dword ptr ds : [ecx + 0x04]
+		imul ecx, ecx, 0x70
+		mov ecx, dword ptr ds : [ecx + 0x9195E4]
+		cmp ecx, 0x01 // checks if main render
+		je VisualTreatmentEnablerCodeCave2_IsMAIN
+
+		// RVM
+		mov ecx, dword ptr ds : [0x982A80]
+		mov eax, dword ptr ds : [0x982BDC]
+		mov edx, dword ptr ds : [eax]
+		push 0x00
+		push 0x00
+		push ecx
+		mov ecx, dword ptr ds : [0x982A84]
+		jmp VisualTreatmentEnablerCodeCave2_Exit
+
+		// MAIN
+		VisualTreatmentEnablerCodeCave2_IsMAIN :
+		mov ecx, dword ptr ds : [0x93DE60]
+		mov eax, dword ptr ds : [0x982BDC]
+		mov edx, dword ptr ds : [eax]
+		push 0x00
+		push 0x00
+		push ecx
+		mov ecx, dword ptr ds : [0x982A28]
+		jmp VisualTreatmentEnablerCodeCave2_Exit
+	}
+}
+
+void __declspec(naked) VisualTreatmentEnablerCodeCave3()
+{
+	__asm
+	{
+		mov eax, dword ptr ds : [0x982A20]
+		mov eax, dword ptr ds : [eax + 0x04]
+		imul eax, eax, 0x70
+		mov eax, dword ptr ds : [eax+0x9195E4]
+		cmp eax, 0x01 // checks if main render
+		je VisualTreatmentEnablerCodeCave3_IsMAIN
+
+		// RVM
+		push 0x02
+		cmp byte ptr [RestoreVisualTreatment], 01
+		je VisualTreatmentEnablerCodeCave3_AA_Smoothing
+		lea eax, dword ptr ds : [VisualTreatmentArray]
+		push eax
+		jmp VisualTreatmentEnablerCodeCave3Part2
+	
+	VisualTreatmentEnablerCodeCave3_AA_Smoothing:
+		push 0x8F9560
+	
+	VisualTreatmentEnablerCodeCave3Part2:
+		push 0x04
+		mov eax, dword ptr ds : [0x982A7C]
+		mov ecx, dword ptr ds : [0x982A80]
+		push eax
+		push ecx
+		call sub_0x6D2CD0
+		add esp, 0x14
+		mov al, byte ptr ds : [0x982B26]
+		jmp VisualTreatmentEnablerCodeCave3_NotOverBright
+
+		// MAIN
+	VisualTreatmentEnablerCodeCave3_IsMAIN: 
+		push 0x02
+		push 0x8F9560
+		push 0x04
+		mov eax, dword ptr ds : [0x93DEF8]
+		mov ecx, dword ptr ds : [0x982990]
+		push eax
+		push ecx
+		call sub_0x6D2CD0
+		add esp, 0x14
+		mov al, byte ptr ds : [0x982B26]
+		test al, al
+		je VisualTreatmentEnablerCodeCave3_NotOverBright
+		mov edx, dword ptr ds : [0x93DEF8]
+		mov eax, dword ptr ds : [0x982998]
+		jmp VisualTreatmentEnablerCodeCave3_Exit
+	
+	VisualTreatmentEnablerCodeCave3_NotOverBright:
+		jmp VisualTreatmentEnablerCodeCave3_Exit2
+	}
+}
+
+void __declspec(naked) VisualTreatmentEnablerCodeCave4()
+{
+	__asm
+	{
+		mov edi, dword ptr ds : [0x982A20]
+		mov edi, dword ptr ds : [edi + 0x04]
+		imul edi, edi, 0x70
+		mov edi, dword ptr ds : [edi + 0x9195E4]
+		cmp edi, 0x01 // checks if main render
+		je VisualTreatmentEnablerCodeCave4_IsMAIN
+
+		// RVM
+		mov edi, dword ptr ds : [0x982A84]
+		jmp VisualTreatmentEnablerCodeCave4_Exit
+
+
+		// MAIN
+	VisualTreatmentEnablerCodeCave4_IsMAIN:
+		mov edi, dword ptr ds : [0x982A28]
+		jmp VisualTreatmentEnablerCodeCave4_Exit
+	}
+}
+
+void __declspec(naked) VisualTreatmentEnablerCodeCave5()
+{
+	__asm
+	{
+		mov edx, dword ptr ds : [0x982A20]
+		mov edx, dword ptr ds : [edx + 0x04]
+		imul edx, edx, 0x70
+		mov edx, dword ptr ds : [edx + 0x9195E4]
+		cmp edx, 0x01 // checks if main render
+		je VisualTreatmentEnablerCodeCave5_IsMAIN
+
+		// RVM
+		mov edx, dword ptr ds : [0x982A7C]
+		jmp VisualTreatmentEnablerCodeCave5_Exit
+
+
+		// MAIN
+	VisualTreatmentEnablerCodeCave5_IsMAIN:
+		mov edx, dword ptr ds : [0x982964]
+		jmp VisualTreatmentEnablerCodeCave5_Exit
+	}
+}
+
+void __declspec(naked) VisualTreatmentEnablerCodeCave6()
+{
+	__asm
+	{
+		mov edx, dword ptr ds : [0x982A20]
+		mov edx, dword ptr ds : [edx + 0x04]
+		imul edx, edx, 0x70
+		mov edx, dword ptr ds : [edx + 0x9195E4]
+		cmp edx, 0x01 // checks if main render
+		je VisualTreatmentEnablerCodeCave6_IsMAIN
+
+		// RVM
+		mov edx, dword ptr ds : [0x982A7C]
+		jmp VisualTreatmentEnablerCodeCave6_Exit
+
+
+		// MAIN
+	VisualTreatmentEnablerCodeCave6_IsMAIN:
+		mov edx, dword ptr ds : [0x93DEF8]
+		jmp VisualTreatmentEnablerCodeCave6_Exit
+	}
+}
+
 void Init()
 {
 	// Read values from .ini
 	CIniReader iniReader("NFSMWHDReflections.ini");
 
 	// Resolution
-	ResX = iniReader.ReadInteger("RESOLUTION", "ResolutionX", 0);
-	ResY = iniReader.ReadInteger("RESOLUTION", "ResolutionY", 0);
-	RoadScale = iniReader.ReadFloat("RESOLUTION", "RoadScale", 1.0);
+	HDReflections = iniReader.ReadInteger("RESOLUTION", "HDReflections", 1);
 	VehicleScale = iniReader.ReadFloat("RESOLUTION", "VehicleScale", 1.0);
+	RoadScale = iniReader.ReadFloat("RESOLUTION", "RoadScale", 1.0);
 	MirrorScale = iniReader.ReadFloat("RESOLUTION", "MirrorScale", 1.0);
 
 	// General
-	HDReflections = iniReader.ReadInteger("GENERAL", "HDRoadReflections", 1);
-	HDReflectionBlur = iniReader.ReadInteger("GENERAL", "HDReflectionBlur", 1);
 	ImproveReflectionLOD = iniReader.ReadInteger("GENERAL", "ImproveReflectionLOD", 2);
 	GeometryFix = iniReader.ReadInteger("GENERAL", "GeometryFix", 1);
-	RestoreDetails = iniReader.ReadInteger("GENERAL", "RestoreDetails", 1);
 	RestoreShaders = iniReader.ReadInteger("GENERAL", "RestoreShaders", 1);
+	RestoreVisualTreatment = iniReader.ReadInteger("GENERAL", "RestoreVisualTreatment", 1);
+	RestoreDetails = iniReader.ReadInteger("GENERAL", "RestoreDetails", 1);
 	OptimizeRenderDistance = iniReader.ReadInteger("GENERAL", "OptimizeRenderDistance", 1);
 	VehicleReflectionBrightness = iniReader.ReadFloat("GENERAL", "VehicleReflectionBrightness", 1.0);
 
 	// Extra
-	ExpandSlotPool = iniReader.ReadInteger("EXTRA", "ExpandSlotPool", 1);
-	MirrorTint = iniReader.ReadInteger("EXTRA", "MirrorTint", 1);
-	MirrorTintR = iniReader.ReadInteger("EXTRA", "MirrorTintR", 150);
-	MirrorTintG = iniReader.ReadInteger("EXTRA", "MirrorTintG", 150);
-	MirrorTintB = iniReader.ReadInteger("EXTRA", "MirrorTintB", 150);
-
-	if (ResX <= 0 || ResY <= 0)
-	{
-		ResX = ::GetSystemMetrics(SM_CXSCREEN);
-		ResY = ::GetSystemMetrics(SM_CYSCREEN);
-	}
+	ExpandMemoryPool = iniReader.ReadInteger("EXTRA", "ExpandMemoryPool", 1);
 
 	if (HDReflections)
 	{
-		// Jumps
+		RoadResX = ::GetSystemMetrics(SM_CXSCREEN);
+		RoadResY = ::GetSystemMetrics(SM_CYSCREEN);
+		VehicleRes = ::GetSystemMetrics(SM_CYSCREEN);
+		MirrorRes = ::GetSystemMetrics(SM_CYSCREEN);
+	}
+
+	// Writes Resolution Values
+	{
 		injector::MakeJMP(0x6BD4FC, RestoreFEReflectionCodeCave, true);
 		injector::MakeJMP(0x6BD52D, VehicleReflectionCodeCave, true);
 		// Road Reflection X
-		injector::WriteMemory<uint32_t>(0x6CFC26, ResX * RoadScale, true);
-		injector::WriteMemory<uint32_t>(0x6BCDF5, ResX * RoadScale, true);
-		injector::WriteMemory<uint32_t>(0x6BD17D, ResX * RoadScale, true);
+		injector::WriteMemory<uint32_t>(0x6CFC26, RoadResX * RoadScale, true);
+		injector::WriteMemory<uint32_t>(0x6BCDF5, RoadResX * RoadScale, true);
+		injector::WriteMemory<uint32_t>(0x6BD17D, RoadResX * RoadScale, true);
 		// Road Reflection Y
-		injector::WriteMemory<uint32_t>(0x6BD184, ResY * RoadScale, true);
-		injector::WriteMemory<uint32_t>(0x6CFC2D, ResY * RoadScale, true);
-		injector::WriteMemory<uint32_t>(0x6BCDEF, ResY * RoadScale, true);
+		injector::WriteMemory<uint32_t>(0x6BD184, RoadResY * RoadScale, true);
+		injector::WriteMemory<uint32_t>(0x6CFC2D, RoadResY * RoadScale, true);
+		injector::WriteMemory<uint32_t>(0x6BCDEF, RoadResY * RoadScale, true);
 		// Vehicle Reflection
-		injector::WriteMemory<uint32_t>(0x8F8FF4, ResY * VehicleScale, true);
-		// RVM Reflection
+		injector::WriteMemory<uint32_t>(0x8F8FF4, VehicleRes * VehicleScale, true);
+		// Rearview Mirror
 		// Aspect ratio is based on NFSU2 because true aspect ratio is unknown
-		injector::WriteMemory<uint32_t>(0x8F9008, ResY * MirrorScale, true);
-		injector::WriteMemory<uint32_t>(0x8F900C, (ResY / 3) * MirrorScale, true);
+		injector::WriteMemory<uint32_t>(0x8F9008, MirrorRes * MirrorScale, true);
+		injector::WriteMemory<uint32_t>(0x8F900C, (MirrorRes / 3) * MirrorScale, true);
 	}
 
 	if (ImproveReflectionLOD >= 1)
@@ -498,17 +630,12 @@ void Init()
 		injector::WriteMemory<uint8_t>(0x4FAEB0, 0xEB, true);
 		if (ImproveReflectionLOD >= 2)
 		// Allows destroyed objects to remain visible in RVM
-		injector::MakeJMP(0x6DE990, DestroyedObjectCodeCave, true);
+		// injector::MakeJMP(0x6DE990, DestroyedObjectCodeCave, true);
 		// Full Road Reflection LOD
 		if (ImproveReflectionLOD >= 2)
 		injector::WriteMemory<uint8_t>(0x6BFF21, 0x06, true);
 		if (ImproveReflectionLOD >= 2)
 		injector::WriteMemory<uint8_t>(0x7293DB, 0x06, true);
-	}
-
-	// HDReflectionBlur
-	{
-		injector::MakeJMP(0x6BCE6E, HDReflectionBlurCodeCave, true);
 	}
 
 	if (GeometryFix)
@@ -541,14 +668,27 @@ void Init()
 		// Enables all shader effects for reflections
 		// Credit to osdever for discovery
 		injector::WriteMemory<uint8_t>(0x6DABD6, 0xEB, true);
-		// Removes road reflection from rearview mirror
-		injector::MakeJMP(0x6D725D, RemoveRoadReflectionCodeCave, true);
+		// Removes road reflection from other reflections
+		injector::MakeJMP(0x6D7289, RemoveRoadReflectionCodeCave, true);
 		// Removes dynamic shadows from reflections
 		injector::MakeJMP(0x6E0436, ReflShadowOpacityCodeCave, true);
-		// Corrects vehicle reflection brightness
+		// Corrects vehicle reflection world brightness
 		injector::MakeJMP(0x7696A4, VehicleReflBrightnessCodeCave, true);
 		// Fixes flashing when low reflection update rate is used
 		injector::MakeJMP(0x6DA528, VehicleReflBrightnessBugFixCodeCave, true);
+		// Corrects mirror brightness
+		injector::MakeJMP(0x6E7120, MirrorRGBCodeCave, true);
+	}
+
+	if (RestoreVisualTreatment)
+	{
+		// Enables Visual Treatment for Mirror
+		injector::MakeJMP(0x6DE9F8, VisualTreatmentEnablerCodeCave1, true);
+		injector::MakeJMP(0x6DBF27, VisualTreatmentEnablerCodeCave2, true);
+		injector::MakeJMP(0x6DBF83, VisualTreatmentEnablerCodeCave3, true);
+		injector::MakeJMP(0x6D542D, VisualTreatmentEnablerCodeCave4, true);
+		injector::MakeJMP(0x6D54B7, VisualTreatmentEnablerCodeCave5, true);
+		injector::MakeJMP(0x6D5499, VisualTreatmentEnablerCodeCave6, true);
 	}
 
 	if (OptimizeRenderDistance)
@@ -566,13 +706,7 @@ void Init()
 		injector::WriteMemory(0x6C77D6, &VehicleReflectionIntensity2, true);
 	}
 
-	if (MirrorTint)
-	{
-		// Controls the RGB of the mirror
-		injector::MakeJMP(0x6E7120, MirrorRGBCodeCave, true);
-	}
-
-	if (ExpandSlotPool)
+	if (ExpandMemoryPool)
 	{
 		// Fixes disappearing objects
 		injector::WriteMemory<uint32_t>(0x5009D2, 0xFA000, true);
@@ -581,7 +715,6 @@ void Init()
 		injector::WriteMemory<uint32_t>(0x500A12, 0xFA000, true);
 	}
 }
-
 	
 BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD reason, LPVOID /*lpReserved*/)
 {
