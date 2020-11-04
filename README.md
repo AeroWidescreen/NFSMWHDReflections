@@ -20,9 +20,29 @@
 - VehicleReflectionBrightness : Controls the intensity of vehicle reflections.  
 - ExpandMemoryPool : Solves an issue that caused objects to disappear when too many polygons were present.  
 
+## FAQ
+Q: What are the original resolution values?  
+A: It varies from game to game. For this one it's Road (320x240), Vehicle (256x256) and Mirror (256x256).  
+
+Q: Why haven't you added RealisticChrome yet?  
+A: It requires custom shaders that I haven't found a reliable way to implement. Ideally, I'm waiting for the next release of osdever's shaders.  
+
+Q: Why does the mirror look blurrier than usual?  
+A: This is due to how visual treatment works; it acts as a primitive form of anti-aliasing. You can get a sharper image with RestoreVisualTreatment = 2.  
+
+Q: Why did you remove the MirrorTint feature?  
+A: It's no longer needed. It's been replaced with RestoreVisualTreatment.  
+
+Q: Is this compatible with other mods?  
+A: I can't make any guarantees. It's been tested with Widescreen Fix, MW Fixes, Extra Options, HUD Adapter, and HUD Resizer.  
+
+Q: What about Redux?  
+A: Redux is not a mod. Support the original mod creators, not the people who bundle them for ad revenue.  
+
 ## Credits
 [Aero_](https://github.com/AeroWidescreen) : Creator of NFSMW HD Reflections.  
 [ExOpts Team](https://github.com/ExOptsTeam/) : The project is based on Extra Options and it wouldn't exist without them.
 
 ## Thanks
-[osdever](https://github.com/osdeverr) : Providing the information needed for RestoreShaders.
+[osdever](https://github.com/osdeverr) : Providing the information needed for RestoreShaders.  
+[elaymm4](https://github.com/elaymm4) : Testing and feedback.  
