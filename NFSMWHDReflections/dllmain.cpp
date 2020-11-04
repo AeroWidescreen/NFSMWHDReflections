@@ -6,8 +6,8 @@
 #include "..\includes\IniReader.h"
 #include <d3d9.h>
 
-bool HDReflections, GeometryFix, RestoreShaders, RestoreVisualTreatment, OptimizeRenderDistance, ExpandMemoryPool;
-int ImproveReflectionLOD, RestoreDetails;
+bool HDReflections, GeometryFix, RestoreShaders, OptimizeRenderDistance, ExpandMemoryPool;
+int  ImproveReflectionLOD, RestoreVisualTreatment, RestoreDetails;
 int RoadResX = 320;
 int RoadResY = 240;
 int VehicleRes = 256;
@@ -450,7 +450,7 @@ void __declspec(naked) VisualTreatmentEnablerCodeCave3()
 
 		// RVM
 		push 0x02
-		cmp byte ptr [RestoreVisualTreatment], 01
+		cmp byte ptr [RestoreVisualTreatment], 0x01
 		je VisualTreatmentEnablerCodeCave3_AA_Smoothing
 		lea eax, dword ptr ds : [VisualTreatmentArray]
 		push eax
