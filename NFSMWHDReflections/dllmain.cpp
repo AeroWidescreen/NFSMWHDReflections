@@ -26,7 +26,7 @@ DWORD RoadReflectionResY;
 DWORD TrafficLightRestorationCodeCaveExit = 0x6DE9F8;
 DWORD TrafficLightFunctionJump = 0x507781;
 DWORD sub_505E80 = 0x505E80;
-DWORD FlareAndShadowLayeringCodeCaveExit = 0x6DE990;
+DWORD RestoreDetailsCodeCaveExit = 0x6DE990;
 DWORD sub_723FA0 = 0x723FA0;
 DWORD sub_750B10 = 0x750B10;
 DWORD sub_6E2F50 = 0x6E2F50;
@@ -43,7 +43,6 @@ DWORD ReflShadowOpacityCodeCaveExit1 = 0x6E043C;
 DWORD ReflShadowOpacityCodeCaveExit2 = 0x6E0445;
 DWORD VehicleReflBrightnessBugFixCodeCaveExit = 0x6DA52F;
 DWORD sub_7538D0 = 0x7538D0;
-DWORD DestroyedObjectCodeCaveExit = 0x6DE996;
 DWORD sub_6C00D0 = 0x6C00D0;
 DWORD sub_6D04E0 = 0x6D04E0;
 DWORD SunflareArray[50];
@@ -105,22 +104,34 @@ void __declspec(naked) TrafficLightRestorationCodeCave()
 	}
 }
 
-void __declspec(naked) FlareAndShadowLayeringCodeCave()
+void __declspec(naked) RestoreDetailsCodeCave()
 {
 	__asm {
-		push 01
+		// world
+		push 0x01
 		push 0x919730
 		lea ecx, dword ptr ds : [esp + 0xE8]
 		call sub_723FA0
 		call sub_6E2F50
+		cmp byte ptr ds : [ImproveReflectionLOD],0x02
+		jl RestoreDetailsCodeCave_NoDestroyableObjects
+		// destroyable objects
+		push 0x00
+		push 0x919730
+		call sub_7538D0
+		add esp, 0x08
+
+	RestoreDetailsCodeCave_NoDestroyableObjects:
+		// car shadow
 		push ebx
 		push 0x00919730
 		call sub_750B10
 		call sub_6E2F50
+		// sunflare
 		push 0x919730
 		lea ecx, dword ptr ds : [SunflareArray]
 		call sub_6D04E0
-		jmp FlareAndShadowLayeringCodeCaveExit
+		jmp RestoreDetailsCodeCaveExit
 	}
 }
 
@@ -300,18 +311,6 @@ void __declspec(naked) ReflShadowOpacityCodeCave()
 	ReflShadowOpacityCodeCavePart2:
 		mov eax, dword ptr ds : [esi + 0x40]
 		jmp ReflShadowOpacityCodeCaveExit2
-	}
-}
-
-void __declspec(naked) DestroyedObjectCodeCave()
-{
-	__asm {
-		push 0x00000000
-		push 0x919730
-		call sub_7538D0
-		add esp,0x08
-		mov ecx, dword ptr ds : [0x93DEBC]
-		jmp DestroyedObjectCodeCaveExit
 	}
 }
 
@@ -629,8 +628,6 @@ void Init()
 		// Full RVM LOD
 		injector::WriteMemory<uint8_t>(0x4FAEB0, 0xEB, true);
 		if (ImproveReflectionLOD >= 2)
-		// Allows destroyed objects to remain visible in RVM
-		// injector::MakeJMP(0x6DE990, DestroyedObjectCodeCave, true);
 		// Full Road Reflection LOD
 		if (ImproveReflectionLOD >= 2)
 		injector::WriteMemory<uint8_t>(0x6BFF21, 0x06, true);
@@ -649,10 +646,11 @@ void Init()
 		injector::MakeJMP(0x6DE9F0, TrafficLightRestorationCodeCave, true);
 		// Solves flare and car shadow layering issue
 		// Adds missing sunflare to the rearview mirror
+		// Adds missing destroyable objects to the rearview mirror
 		injector::MakeJMP(0x6DB260, SunflareCodeCave1, true);
 		injector::MakeJMP(0x6E6DAD, SunflareCodeCave2, true);
 		injector::MakeJMP(0x6DB0FE, SunflareCodeCave3, true);
-		injector::MakeJMP(0x6DE96D, FlareAndShadowLayeringCodeCave, true);
+		injector::MakeJMP(0x6DE96D, RestoreDetailsCodeCave, true);
 		// Solves flare culling issue 
 		injector::WriteMemory<uint8_t>(0x729479, 0xEB, true);
 		// Adds missing car shadow to the rearview mirror
