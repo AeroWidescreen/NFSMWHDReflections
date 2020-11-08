@@ -542,6 +542,7 @@ void __declspec(naked) VisualTreatmentEnablerCodeCave6()
 {
 	__asm
 	{
+		push edx
 		mov edx, dword ptr ds : [0x982A20]
 		mov edx, dword ptr ds : [edx + 0x04]
 		imul edx, edx, 0x70
@@ -550,13 +551,15 @@ void __declspec(naked) VisualTreatmentEnablerCodeCave6()
 		je VisualTreatmentEnablerCodeCave6_IsMAIN
 
 		// RVM
+		pop edx
 		mov edx, dword ptr ds : [0x982A7C]
 		jmp VisualTreatmentEnablerCodeCave6_Exit
 
 
 		// MAIN
 	VisualTreatmentEnablerCodeCave6_IsMAIN:
-		mov edx, dword ptr ds : [0x93DEF8]
+		pop edx
+		mov edx, dword ptr ds : [edx * 0x4 + 0x93DEF8]
 		jmp VisualTreatmentEnablerCodeCave6_Exit
 	}
 }
