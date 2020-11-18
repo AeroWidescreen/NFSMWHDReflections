@@ -22,7 +22,7 @@
 
 ## FAQ
 Q: What are the original resolution values?  
-A: It varies from game to game. For this one it's Road (320x240), Vehicle (256x256) and Mirror (256x256).  
+A: It varies from game to game. For this one it's Road: 320x240, Vehicle: 256x256, and Mirror 256x256.  
 
 Q: Why haven't you added RealisticChrome yet?  
 A: It requires custom shaders that I haven't found a reliable way to implement. Ideally, I'm waiting for the next release of osdever's shaders.  
@@ -31,13 +31,13 @@ Q: Why does the mirror look blurrier than usual?
 A: This is due to how visual treatment works; it acts as a primitive form of anti-aliasing. You can get a sharper image with RestoreVisualTreatment = 2.  
 
 Q: Why did you remove the MirrorTint feature?  
-A: It's no longer needed. It's been replaced with RestoreVisualTreatment.  
+A: It's been replaced with RestoreVisualTreatment. The color of the visual treatment can be changed using Extra Options.  
 
 Q: Is this compatible with other mods?  
-A: I can't make any guarantees. It's been tested with Widescreen Fix, MW Fixes, Extra Options, HUD Adapter, and HUD Resizer.  
+A: I can't make any guarantees. It's been tested with Widescreen Fix, MW Fixes, Extra Options, Unlimiter, HUD Adapter, and HUD Resizer. All texture mods and car mods should work.  
 
-Q: What about Redux?  
-A: Redux is not a mod. Support the original mod creators, not the people who bundle them for ad revenue.  
+Q: What are the system requirements?  
+A:  It's difficult to say because it depends on your resolution, settings, and other enhancements being used. For 1080p, anything with a GTX 1060 / RX 480, Core i5 / Ryzen 3 should be able to easily run this.  
 
 ## Credits
 [Aero_](https://github.com/AeroWidescreen) : Creator of NFSMW HD Reflections.  
