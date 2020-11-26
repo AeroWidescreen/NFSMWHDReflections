@@ -30,3 +30,8 @@ NFSMWHDReflections/Release/vc142.pdb
 *.ipch
 *.log
 *.txt
+*.sarif
+*.recipe
+*.pchast
+NFSMWHDReflections/Release/stdafx.nativecodeanalysis.xml
+NFSMWHDReflections/Release/dllmain.nativecodeanalysis.xml

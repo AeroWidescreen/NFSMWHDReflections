@@ -8,6 +8,7 @@
 
 ## Features
 - HDReflections : Resolution will be increased based on desktop resolution.
+- OldGPUCompatibility : Vehicle reflections will be rounded to the nearest power of two.
 - VehicleScale : Controls the resolution multiplier of vehicle reflections.
 - RoadScale : Controls the resolution multiplier of road reflections.
 - MirrorScale : Controls the resolution multiplier of the rearview mirror.

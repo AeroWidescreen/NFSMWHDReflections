@@ -6,7 +6,8 @@
 #include "..\includes\IniReader.h"
 #include <d3d9.h>
 
-bool HDReflections, GeometryFix, RestoreShaders, OptimizeRenderDistance, ExpandMemoryPool;
+
+bool HDReflections, OldGPUCompatibility, GeometryFix, RestoreShaders, OptimizeRenderDistance, ExpandMemoryPool;
 int  ImproveReflectionLOD, RestoreVisualTreatment, RestoreDetails;
 int RoadResX = 320;
 int RoadResY = 240;
@@ -566,14 +567,16 @@ void __declspec(naked) VisualTreatmentEnablerCodeCave6()
 
 void Init()
 {
+
 	// Read values from .ini
 	CIniReader iniReader("NFSMWHDReflections.ini");
 
 	// Resolution
 	HDReflections = iniReader.ReadInteger("RESOLUTION", "HDReflections", 1);
-	VehicleScale = iniReader.ReadFloat("RESOLUTION", "VehicleScale", 1.0);
-	RoadScale = iniReader.ReadFloat("RESOLUTION", "RoadScale", 1.0);
-	MirrorScale = iniReader.ReadFloat("RESOLUTION", "MirrorScale", 1.0);
+	OldGPUCompatibility = iniReader.ReadInteger("RESOLUTION", "OldGPUCompatibility", 0);
+	VehicleScale = iniReader.ReadFloat("RESOLUTION", "VehicleScale", 1.0f);
+	RoadScale = iniReader.ReadFloat("RESOLUTION", "RoadScale", 1.0f);
+	MirrorScale = iniReader.ReadFloat("RESOLUTION", "MirrorScale", 1.0f);
 
 	// General
 	ImproveReflectionLOD = iniReader.ReadInteger("GENERAL", "ImproveReflectionLOD", 2);
@@ -582,17 +585,17 @@ void Init()
 	RestoreVisualTreatment = iniReader.ReadInteger("GENERAL", "RestoreVisualTreatment", 1);
 	RestoreDetails = iniReader.ReadInteger("GENERAL", "RestoreDetails", 1);
 	OptimizeRenderDistance = iniReader.ReadInteger("GENERAL", "OptimizeRenderDistance", 1);
-	VehicleReflectionBrightness = iniReader.ReadFloat("GENERAL", "VehicleReflectionBrightness", 1.0);
+	VehicleReflectionBrightness = iniReader.ReadFloat("GENERAL", "VehicleReflectionBrightness", 1.0f);
 
 	// Extra
 	ExpandMemoryPool = iniReader.ReadInteger("EXTRA", "ExpandMemoryPool", 1);
 
 	if (HDReflections)
 	{
-		RoadResX = ::GetSystemMetrics(SM_CXSCREEN);
-		RoadResY = ::GetSystemMetrics(SM_CYSCREEN);
-		VehicleRes = ::GetSystemMetrics(SM_CYSCREEN);
-		MirrorRes = ::GetSystemMetrics(SM_CYSCREEN);
+		RoadResX = GetSystemMetrics(SM_CXSCREEN);
+		RoadResY = GetSystemMetrics(SM_CYSCREEN);
+		VehicleRes = GetSystemMetrics(SM_CYSCREEN);
+		MirrorRes = GetSystemMetrics(SM_CYSCREEN);
 	}
 
 	// Writes Resolution Values
@@ -607,12 +610,26 @@ void Init()
 		injector::WriteMemory<uint32_t>(0x6BD184, RoadResY * RoadScale, true);
 		injector::WriteMemory<uint32_t>(0x6CFC2D, RoadResY * RoadScale, true);
 		injector::WriteMemory<uint32_t>(0x6BCDEF, RoadResY * RoadScale, true);
-		// Vehicle Reflection
-		injector::WriteMemory<uint32_t>(0x8F8FF4, VehicleRes * VehicleScale, true);
 		// Rearview Mirror
 		// Aspect ratio is based on NFSU2 because true aspect ratio is unknown
 		injector::WriteMemory<uint32_t>(0x8F9008, MirrorRes * MirrorScale, true);
 		injector::WriteMemory<uint32_t>(0x8F900C, (MirrorRes / 3) * MirrorScale, true);
+		// Vehicle Reflection
+		injector::WriteMemory<uint32_t>(0x8F8FF4, VehicleRes * VehicleScale, true);
+		
+		if (OldGPUCompatibility)
+		{
+			// Rounds vehicle resolution down to the nearest power of two
+			static int VehicleRes_POT = (VehicleRes * VehicleScale);
+			VehicleRes_POT--;
+			VehicleRes_POT |= VehicleRes_POT >> 1;
+			VehicleRes_POT |= VehicleRes_POT >> 2;
+			VehicleRes_POT |= VehicleRes_POT >> 4;
+			VehicleRes_POT |= VehicleRes_POT >> 8;
+			VehicleRes_POT |= VehicleRes_POT >> 16;
+			VehicleRes_POT++;
+			injector::WriteMemory<uint32_t>(0x8F8FF4, VehicleRes_POT / 2, true);
+		}
 	}
 
 	if (ImproveReflectionLOD >= 1)
@@ -640,7 +657,7 @@ void Init()
 
 	if (GeometryFix)
 	{
-		injector::WriteMemory<uint8_t>(0x6C69AE, 0xEB, true);
+		injector::WriteMemory<uint8_t>(0x8FAE44, 0x00, true);
 	}
 
 	if (RestoreDetails >= 1)
