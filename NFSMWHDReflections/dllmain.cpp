@@ -9,15 +9,17 @@
 
 bool HDReflections, OldGPUCompatibility, GeometryFix, RestoreShaders, OptimizeRenderDistance, ExpandMemoryPool;
 int  ImproveReflectionLOD, RestoreVisualTreatment, RestoreDetails;
-int RoadResX = 320;
-int RoadResY = 240;
-int VehicleRes = 256;
-int MirrorRes = 256;
 float RoadScale, VehicleScale, MirrorScale, VehicleReflectionBrightness;
 float SkyboxRenderDistance = 0.5f;
 float RGBAmbient = 0.5f;
 float RGBDiffuse = 0.75f;
 float RGBSpecular = 0.0f;
+
+int RoadResX = 320;
+int RoadResY = 240;
+int VehicleRes = 256;
+int MirrorResX = 256;
+int MirrorResY = 256;
 
 DWORD RestoreFEReflectionCodeCaveExit = 0x6BD502;
 DWORD VehicleReflectionCodeCaveExit = 0x6BD533;
@@ -451,7 +453,7 @@ void __declspec(naked) VisualTreatmentEnablerCodeCave3()
 		// RVM
 		push 0x02
 		cmp byte ptr [RestoreVisualTreatment], 0x01
-		je VisualTreatmentEnablerCodeCave3_AA_Smoothing
+		jne VisualTreatmentEnablerCodeCave3_AA_Smoothing
 		lea eax, dword ptr ds : [VisualTreatmentArray]
 		push eax
 		jmp VisualTreatmentEnablerCodeCave3Part2
@@ -595,7 +597,8 @@ void Init()
 		RoadResX = GetSystemMetrics(SM_CXSCREEN);
 		RoadResY = GetSystemMetrics(SM_CYSCREEN);
 		VehicleRes = GetSystemMetrics(SM_CYSCREEN);
-		MirrorRes = GetSystemMetrics(SM_CYSCREEN);
+		MirrorResX = GetSystemMetrics(SM_CYSCREEN);
+		MirrorResY = GetSystemMetrics(SM_CYSCREEN) / 3;
 	}
 
 	// Writes Resolution Values
@@ -612,8 +615,8 @@ void Init()
 		injector::WriteMemory<uint32_t>(0x6BCDEF, RoadResY * RoadScale, true);
 		// Rearview Mirror
 		// Aspect ratio is based on NFSU2 because true aspect ratio is unknown
-		injector::WriteMemory<uint32_t>(0x8F9008, MirrorRes * MirrorScale, true);
-		injector::WriteMemory<uint32_t>(0x8F900C, (MirrorRes / 3) * MirrorScale, true);
+		injector::WriteMemory<uint32_t>(0x8F9008, MirrorResX * MirrorScale, true);
+		injector::WriteMemory<uint32_t>(0x8F900C, MirrorResY * MirrorScale, true);
 		// Vehicle Reflection
 		injector::WriteMemory<uint32_t>(0x8F8FF4, VehicleRes * VehicleScale, true);
 		
@@ -628,7 +631,7 @@ void Init()
 			VehicleRes_POT |= VehicleRes_POT >> 8;
 			VehicleRes_POT |= VehicleRes_POT >> 16;
 			VehicleRes_POT++;
-			injector::WriteMemory<uint32_t>(0x8F8FF4, VehicleRes_POT / 2, true);
+			injector::WriteMemory<uint32_t>(0x8F8FF4, VehicleRes_POT, true);
 		}
 	}
 

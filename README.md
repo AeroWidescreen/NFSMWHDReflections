@@ -29,7 +29,7 @@ Q: Why haven't you added RealisticChrome yet?
 A: It requires custom shaders that I haven't found a reliable way to implement. Ideally, I'm waiting for the next release of osdever's shaders.  
 
 Q: Why does the mirror look blurrier than usual?  
-A: This is due to how visual treatment works; it acts as a primitive form of anti-aliasing. You can get a sharper image with RestoreVisualTreatment = 2.  
+A: This is due to how visual treatment works; it acts as a primitive form of anti-aliasing. You can use RestoreVisualTreatment = 1 for a sharper image.
 
 Q: Why did you remove the MirrorTint feature?  
 A: It's been replaced with RestoreVisualTreatment. The color of the visual treatment can be changed using Extra Options.  
