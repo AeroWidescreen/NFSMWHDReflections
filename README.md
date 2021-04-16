@@ -23,7 +23,7 @@
 
 ## FAQ
 Q: What are the original resolution values?  
-A: It varies from game to game. For this one it's Road: 320x240, Vehicle: 256x256, and Mirror 256x256.  
+A: It varies from game to game. For this one it's Road: 320x240, Vehicle: 256x256, and Mirror: 256x256.  
 
 Q: Why haven't you added RealisticChrome yet?  
 A: It requires custom shaders that I haven't found a reliable way to implement. Ideally, I'm waiting for the next release of osdever's shaders.  
